@@ -5,6 +5,12 @@ type BaseMessage struct {
 	Type string `json:"type"`
 }
 
+// MessageQuit - see protocol.md (quit)
+type MessageQuit struct {
+	BaseMessage
+	Message string `json:"message"`
+}
+
 // MessageFatal - see protocol.md (fatal)
 type MessageFatal struct {
 	BaseMessage

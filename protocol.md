@@ -6,6 +6,19 @@ Communication is established over a WebSocket _connection_ with JSON _messages_ 
 
 Each message is a JSON document which necessarily has `type` field which describes message type
 
+### quit (sent by server and client)
+
+```json
+{
+    "type": "quit",
+    "message": "<string>",
+}
+```
+
+Sent by both server and client to indicate that one of them is no longer interested in the connection.
+
+After sending/receiving server and client MUST close the connection.
+
 ### fatal (sent by server)
 
 ```json
