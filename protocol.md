@@ -11,7 +11,7 @@ Each message is a JSON document which necessarily has `type` field which describ
 ```json
 {
     "type": "fatal",
-    "message": "string",
+    "message": "<string>",
 }
 ```
 
@@ -19,13 +19,40 @@ Send by server to indicate that a fatal error has occured and the connection mus
 
 Server MUST close the connection after sending this message.
 
+### note (sent by server)
+
+```json
+{
+    "type": "note",
+    "message": "<string>"
+}
+```
+
+### ok, fail (sent by server)
+
+```json
+{
+    "type": "ok",
+    "message": "<string>"
+}
+```
+
+```json
+{
+    "type": "fail",
+    "message": "<string>"
+}
+```
+
+These messages are used to notify user about results of operations started by the user.
+
 ### register (sent by client)
 
 ```json
 {
     "type": "register",
-    "name": "string",
-    "hash": "string"
+    "name": "<string>",
+    "hash": "<string>"
 }
 ```
 
@@ -36,13 +63,15 @@ If user with username `name` already exists, server MUST send a `fatal` message.
 
 Server MAY introduce additional protection like IP duplication protection.
 
+If this is a first user ever registered, server MUST give that user admin permissions and send him a corresponding `note` message.
+
 ### login (sent by client)
 
 ```json
 {
     "type": "login",
-    "name": "string",
-    "hash": "string"
+    "name": "<string>",
+    "hash": "<string>"
 }
 ```
 
@@ -52,6 +81,8 @@ pass: SHA256 hash/checksum. MUST match `[a-f0-9]{64}` regex
 If user with username `name` does not exist or SHA256 hash/checksum `hash` is invalid, server MUST send a `fatal` message.
 
 Server MAY introduce additional protection like banning users from connecting.
+
+If user has administrator privileges, server MUST send him a corresponding `note` message.
 
 ### ping (sent by server)
 
@@ -72,14 +103,3 @@ Server MUST send this every N seconds. If user does not reply with a `pong` mess
 ```
 
 Client MUST send this message in response to a `ping` message. Clients which fail to do so will be disconnected when next `ping` message should be sent.
-
-### first run administrator notice (sent by server)
-
-```json
-{
-    "type": "note",
-    "message": "You became a server administrator!"
-}
-```
-
-Server MUST send this message once a client registers on the server on its first run. It must not be sent again.
