@@ -25,12 +25,12 @@ Server MUST close the connection after sending this message.
 {
     "type": "register",
     "name": "string",
-    "pass": "string"
+    "hash": "string"
 }
 ```
 
 name: Username. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
-pass: Password. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
+hash: SHA256 hash/checksum. MUST match `[a-f0-9]{64}` regex
 
 If user with username `name` already exists, server MUST send a `fatal` message.
 
@@ -42,14 +42,14 @@ Server MAY introduce additional protection like IP duplication protection.
 {
     "type": "login",
     "name": "string",
-    "pass": "string"
+    "hash": "string"
 }
 ```
 
 name: Username. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
-pass: Password. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
+pass: SHA256 hash/checksum. MUST match `[a-f0-9]{64}` regex
 
-If user with username `name` does not exist or password `pass` is invalid, server MUST send a `fatal` message.
+If user with username `name` does not exist or SHA256 hash/checksum `hash` is invalid, server MUST send a `fatal` message.
 
 Server MAY introduce additional protection like banning users from connecting.
 
@@ -72,3 +72,14 @@ Server MUST send this every N seconds. If user does not reply with a `pong` mess
 ```
 
 Client MUST send this message in response to a `ping` message. Clients which fail to do so will be disconnected when next `ping` message should be sent.
+
+### first run administrator notice (sent by server)
+
+```json
+{
+    "type": "note",
+    "message": "You became a server administrator!"
+}
+```
+
+Server MUST send this message once a client registers on the server on its first run. It must not be sent again.
