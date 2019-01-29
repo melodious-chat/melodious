@@ -52,12 +52,12 @@ These messages are used to notify user about results of operations started by th
 {
     "type": "register",
     "name": "<string>",
-    "hash": "<string>"
+    "pass": "<sha256>"
 }
 ```
 
 name: Username. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
-hash: SHA256 hash/checksum. MUST match `[a-f0-9]{64}` regex
+hash: SHA256 hash sum of the password. MUST match `[a-f0-9]{64}` regex
 
 If user with username `name` already exists, server MUST send a `fatal` message.
 
@@ -65,24 +65,30 @@ Server MAY introduce additional protection like IP duplication protection.
 
 If this is a first user ever registered, server MUST give that user admin permissions and send him a corresponding `note` message.
 
+It is recommended that server stores hash sum of the hash sum of the password to prevent heavy damage on database leak.
+
+After registering user MUST be treated as logged in.
+
 ### login (sent by client)
 
 ```json
 {
     "type": "login",
     "name": "<string>",
-    "hash": "<string>"
+    "pass": "<sha256>"
 }
 ```
 
 name: Username. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
-pass: SHA256 hash/checksum. MUST match `[a-f0-9]{64}` regex
+hash: SHA256 hash sum of the password. MUST match `[a-f0-9]{64}` regex
 
 If user with username `name` does not exist or SHA256 hash/checksum `hash` is invalid, server MUST send a `fatal` message.
 
 Server MAY introduce additional protection like banning users from connecting.
 
 If user has administrator privileges, server MUST send him a corresponding `note` message.
+
+It is recommended that server stores hash sum of the hash sum of the password to prevent heavy damage on database leak.
 
 ### ping (sent by server)
 
