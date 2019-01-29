@@ -15,12 +15,12 @@ type HTTPHandler struct {
 }
 
 // handleIndex - Handles clients which want to receive the index page
-func handleIndex(w http.ResponseWriter, r *http.Request) {
+func handleIndex(mel *Melodious, w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello, World! You should really use a proper Melodious client instead of opening this page\n")
 }
 
 // handleConnect - Handles clients which want to connect to Melodious
-func handleConnect(w http.ResponseWriter, r *http.Request) {
+func handleConnect(mel *Melodious, w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -29,16 +29,22 @@ func handleConnect(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.WithFields(log.Fields{"err": err, "addr": r.RemoteAddr, "path": r.URL.Path}).Error("cannot upgrade to websocket")
 	} else {
-		go handleConnection(conn)
+		go handleConnection(mel, conn)
 	}
 }
 
 // NewHTTPHandler - creates a new HTTPHandler xD
-func NewHTTPHandler() *HTTPHandler {
+func NewHTTPHandler(mel *Melodious) *HTTPHandler {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/", handleIndex)
-	router.HandleFunc("/connect", handleConnect)
+	wrap := func(mel *Melodious, f func(*Melodious, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+		return func(w http.ResponseWriter, r *http.Request) {
+			f(mel, w, r)
+		}
+	}
+
+	router.HandleFunc("/", wrap(mel, handleIndex))
+	router.HandleFunc("/connect", wrap(mel, handleConnect))
 
 	return &HTTPHandler{
 		Router: router,
