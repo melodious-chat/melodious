@@ -93,7 +93,7 @@ After registering user MUST be treated as logged in.
 ```
 
 name: Username. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
-hash: SHA256 hash sum of the password. MUST match `[a-f0-9]{32}` regex
+hash: SHA256 hash sum of the password. MUST match `[a-f0-9]{32-64}` regex
 
 If user with username `name` does not exist or SHA256 hash/checksum `hash` is invalid, server MUST send a `fatal` message.
 
