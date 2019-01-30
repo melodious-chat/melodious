@@ -6,7 +6,7 @@ import (
 
 // handleConnection Handles users which are connected to Melodious
 func handleConnection(mel *Melodious, conn *websocket.Conn) {
-	receivedPong := false
+	// receivedPong := false
 
 	// receiver
 	go func() {
