@@ -115,32 +115,6 @@ func (m *MessageLogin) Validate() bool {
 	return true
 }
 
-// MessagePing - see protocol.md (ping)
-type MessagePing struct{}
-
-// GetType - MessagePing.
-func (m *MessagePing) GetType() string {
-	return "ping"
-}
-
-// Validate - MessagePing.
-func (m *MessagePing) Validate() bool {
-	return true
-}
-
-// MessagePong - see protocol.md (pong)
-type MessagePong struct{}
-
-// GetType - MessagePong.
-func (m *MessagePong) GetType() string {
-	return "pong"
-}
-
-// Validate - MessagePong.
-func (m *MessagePong) Validate() bool {
-	return true
-}
-
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	switch iface["type"].(string) {
@@ -158,10 +132,6 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 		return &MessageRegister{Name: iface["name"].(string), Pass: iface["pass"].(string)}, nil
 	case "login":
 		return &MessageLogin{Name: iface["name"].(string), Pass: iface["pass"].(string)}, nil
-	case "ping":
-		return &MessagePing{}, nil
-	case "pong":
-		return &MessagePong{}, nil
 	}
 	return nil, errors.New("invalid type " + iface["type"].(string))
 }
@@ -183,10 +153,6 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		return map[string]interface{}{"type": "register", "name": msg.(*MessageRegister).Name, "pass": msg.(*MessageRegister).Pass}, nil
 	case *MessageLogin:
 		return map[string]interface{}{"type": "login", "name": msg.(*MessageLogin).Name, "pass": msg.(*MessageLogin).Pass}, nil
-	case *MessagePing:
-		return map[string]interface{}{"type": "ping"}, nil
-	case *MessagePong:
-		return map[string]interface{}{"type": "pong"}, nil
 	}
 	return nil, errors.New("invalid type")
 }

@@ -102,23 +102,3 @@ Server MAY introduce additional protection like banning users from connecting.
 If user has administrator privileges, server MUST send him a corresponding `note` message.
 
 It is recommended that server stores hash sum of the hash sum of the password to prevent heavy damage on database leak.
-
-### ping (sent by server)
-
-```json
-{
-    "type": "ping"
-}
-```
-
-Server MUST send this every N seconds. If user does not reply with a `pong` message in N seconds, server MUST send a `fatal` message.
-
-### pong (sent by client)
-
-```json
-{
-    "type": "pong"
-}
-```
-
-Client MUST send this message in response to a `ping` message. Clients which fail to do so will be disconnected when next `ping` message should be sent.
