@@ -9,18 +9,18 @@ Written in Go, it is both fast and stable. Changes being made literally every 7-
 
 Although it might seem like a shit idea since Discord is boasting a userbase of >150M people and counting, we are **free of furries**, which will probably attract more people.
 
-------------------------------------
-### To-Do list [subject to change, approximated]
+### Current To-Do list
 
-------------------------------------
-|Date               | Feature                                        |
-|-------------------|------------------------------------------------|
-|February 2019      | Make the damn thing compileable already        |
-|Until February 2019| Make a logo for the project                    |
-|March-April 2019   | Proof-Of-Concept                               |
-|May-June 2019      | Polish the thing and start hosting betas       |
-|June-July 2019     | Get out of beta                                |
-|August 2019        | Launch the project and start spreading the word|
+* Implement a working prototype
+  * Implement authentication
+    * Implement `func (db *Database) RegisterUser(name string, passhash string) error`
+    * Implement `func (db *Database) CheckUser(name string, passhash string) (bool, error)`
+    * Get a working connection map (`*sync.Map`)
+    * Implement `register` and `login` messages
+  * Implement messaging
+  * Allow uploading and receiving images
+* Add a REST API for those who cannot use websockets
+
 ```
 <handicraftsman> raov: lmao
 ```
