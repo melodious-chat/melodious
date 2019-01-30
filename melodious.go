@@ -6,13 +6,24 @@ import (
 
 // Melodious - root structure
 type Melodious struct {
-	Config *Config
+	Config   *Config
+	Database *Database
 }
 
 // NewMelodious - creates a new Melodious instance
 func NewMelodious(cfg *Config) *Melodious {
 	return &Melodious{
-		Config: cfg,
+		Config:   cfg,
+		Database: nil,
+	}
+}
+
+// ConnectToDB - connects to the database
+func (mel *Melodious) ConnectToDB() {
+	var err error
+	mel.Database, err = NewDatabase(mel, mel.Config.DBAddr)
+	if err != nil {
+		panic(err)
 	}
 }
 

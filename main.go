@@ -29,5 +29,6 @@ func main() {
 
 	// Setup Melodious
 	mel := NewMelodious(cfg)
+	mel.ConnectToDB()
 	<-mel.RunWebServer()
 }

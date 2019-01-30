@@ -10,6 +10,10 @@ type Config struct {
 	// Must be specified as shown at https://godoc.org/github.com/lib/pq
 	DBAddr   string `json:"db-addr"`
 	HTTPAddr string `json:"http-addr"`
+
+	// These are ISO 8601 durations
+	DeleteHistoryEvery string `json:"delete-history-every"`
+	StoreHistoryFor    string `json:"store-history-for"`
 }
 
 // NewConfig - creates a new Config instance from given JSON data
