@@ -8,3 +8,6 @@ Well, Project Melodious is **the** chat for you!
 Written on Go, it is both fast and stable. Changes being made literally every 2-4 hours, it is growing fast and strong to be **a fully-featured Discord clone, without furries!**
 Although it might seem like a shit idea since Discord is boasting a userbase of >150M people and counting, we are **free of furries**, which will probably attract more people.
 
+```
+<handicraftsman> raov: lmao
+```
