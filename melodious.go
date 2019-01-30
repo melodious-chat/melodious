@@ -2,8 +2,6 @@ package main
 
 import (
 	"net/http"
-
-	"github.com/gorilla/mux"
 )
 
 // Melodious - root structure
@@ -20,7 +18,7 @@ func NewMelodious(cfg *Config) *Melodious {
 
 // webServerRunner - An internal function used by RunWebServer
 func (mel *Melodious) webServerRunner() {
-	h := &HTTPHandler{Router: mux.NewRouter()}
+	h := NewHTTPHandler(mel)
 	http.ListenAndServe(mel.Config.HTTPAddr, h)
 }
 

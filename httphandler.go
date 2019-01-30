@@ -21,9 +21,12 @@ func handleIndex(mel *Melodious, w http.ResponseWriter, r *http.Request) {
 
 // handleConnect - Handles clients which want to connect to Melodious
 func handleConnect(mel *Melodious, w http.ResponseWriter, r *http.Request) {
+	originChecker := func(*http.Request) bool { return true }
+
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
+		CheckOrigin:     originChecker,
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
