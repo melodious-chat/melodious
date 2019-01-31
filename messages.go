@@ -1,6 +1,8 @@
 package main
 
-import "errors"
+import (
+	"errors"
+)
 
 // BaseMessage - A base struct for all messages
 type BaseMessage interface {
@@ -119,18 +121,45 @@ func (m *MessageLogin) Validate() bool {
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	switch iface["type"].(string) {
 	case "quit":
+		if _, ok := iface["message"]; !ok {
+			return nil, errors.New("no message field in quit message")
+		}
 		return &MessageQuit{Message: iface["message"].(string)}, nil
 	case "fatal":
+		if _, ok := iface["message"]; !ok {
+			return nil, errors.New("no message field in fatal message")
+		}
 		return &MessageFatal{Message: iface["message"].(string)}, nil
 	case "note":
+		if _, ok := iface["message"]; !ok {
+			return nil, errors.New("no message field in note message")
+		}
 		return &MessageNote{Message: iface["message"].(string)}, nil
 	case "ok":
+		if _, ok := iface["message"]; !ok {
+			return nil, errors.New("no message field in ok message")
+		}
 		return &MessageOk{Message: iface["message"].(string)}, nil
 	case "fail":
+		if _, ok := iface["message"]; !ok {
+			return nil, errors.New("no message field in fail message")
+		}
 		return &MessageFail{Message: iface["message"].(string)}, nil
 	case "register":
+		if _, ok := iface["name"]; !ok {
+			return nil, errors.New("no name field in register message")
+		}
+		if _, ok := iface["pass"]; !ok {
+			return nil, errors.New("no pass field in register message")
+		}
 		return &MessageRegister{Name: iface["name"].(string), Pass: iface["pass"].(string)}, nil
 	case "login":
+		if _, ok := iface["name"]; !ok {
+			return nil, errors.New("no name field in login message")
+		}
+		if _, ok := iface["pass"]; !ok {
+			return nil, errors.New("no pass field in login message")
+		}
 		return &MessageLogin{Name: iface["name"].(string), Pass: iface["pass"].(string)}, nil
 	}
 	return nil, errors.New("invalid type " + iface["type"].(string))
