@@ -73,6 +73,36 @@ func (db *Database) CheckUserPassword(name string, passhash string) (bool, error
 	return true, nil
 }
 
+// IsUserAdmin - checks if user with given name is an admin
+func (db *Database) IsUserAdmin(name string) (bool, error) {
+	row := db.db.QueryRow(`
+		SELECT id FROM accounts WHERE EXISTS(SELECT id FROM accounts WHERE username=? AND admin=TRUE);
+	`, name)
+
+	var id int // this is unused though
+	err := row.Scan(&id)
+	if err == sql.ErrNoRows {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// SetUserAdmin - sets users admin status
+func (db *Database) SetUserAdmin(name string, admin bool) error {
+	_, err := db.db.Exec(`
+		UPDATE accounts SET admin=? WHERE username=?;
+	`, admin, name)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // NewDatabase - creates a new Database instance
 func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	db, err := sql.Open("postgres", addr)
