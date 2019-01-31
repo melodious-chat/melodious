@@ -73,6 +73,7 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 				var iface map[string]interface{}
 				err := conn.ReadJSON(&iface)
 				if err != nil {
+					messageStream <- &MessageFatal{Message: "invalid JSON received"}
 					log.WithFields(log.Fields{
 						"addr": conn.RemoteAddr().String(),
 						"name": connInfo.username,
@@ -84,7 +85,7 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 				}
 				msg, err := LoadMessage(iface)
 				if err != nil {
-					messageStream <- &MessageFail{Message: err.Error()}
+					messageStream <- &MessageFatal{Message: err.Error()}
 					log.WithFields(log.Fields{
 						"addr": conn.RemoteAddr().String(),
 						"name": connInfo.username,
