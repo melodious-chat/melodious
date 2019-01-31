@@ -50,8 +50,6 @@ An example config file:
 
 * Implement a working prototype
   * Implement authentication
-    * Implement `func (db *Database) RegisterUser(name string, passhash string) error`
-    * Implement `func (db *Database) CheckUser(name string, passhash string) (bool, error)`
     * Get a working connection map (`*sync.Map`)
     * Implement `register` and `login` messages
   * Implement messaging
