@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	_ "github.com/lib/pq"
 )
@@ -39,10 +40,10 @@ func (db *Database) RegisterUser(name string, passhash string) error {
 // RegisterUserOwner - adds a new user to the database, possibly owner
 func (db *Database) RegisterUserOwner(name string, passhash string, owner bool) error {
 	sum := sha256.Sum256([]byte(passhash))
-	sumstr := string(sum[:32])
+	sumstr := fmt.Sprintf("%x", sum[:32])
 
 	_, err := db.db.Exec(`
-		INSERT INTO accounts (username, passhash, owner) VALUES (?, ?, ?);
+		INSERT INTO accounts (username, passhash, owner) VALUES ($1, $2, $3);
 	`, name, sumstr, owner)
 
 	if err != nil {
@@ -56,7 +57,7 @@ func (db *Database) RegisterUserOwner(name string, passhash string, owner bool) 
 // Always check if returned error is not nil, as it returns -1 on errors
 func (db *Database) GetUserID(name string) (int, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE username=? LIMIT 1;
+		SELECT id FROM accounts WHERE username=$1 LIMIT 1;
 	`, name)
 
 	var id int
@@ -74,7 +75,7 @@ func (db *Database) GetUserID(name string) (int, error) {
 // Always check if returned error is not-nil, as it returns false on errors
 func (db *Database) UserExists(name string) (bool, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE username=? LIMIT 1;
+		SELECT id FROM accounts WHERE username=$1 LIMIT 1;
 	`, name)
 
 	var id int // this is unused though
@@ -92,7 +93,7 @@ func (db *Database) UserExists(name string) (bool, error) {
 // Always check if returned error is not-nil, as it returns false on errors
 func (db *Database) UserExistsID(id int) (bool, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE id=? LIMIT 1;
+		SELECT id FROM accounts WHERE id=$1 LIMIT 1;
 	`, id)
 
 	var _id int // this is unused though
@@ -110,10 +111,10 @@ func (db *Database) UserExistsID(id int) (bool, error) {
 // Always check if returned error is not-nil, as it returns false on errors
 func (db *Database) CheckUserPassword(name string, passhash string) (bool, error) {
 	sum := sha256.Sum256([]byte(passhash))
-	sumstr := string(sum[:32])
+	sumstr := fmt.Sprintf("%x", sum[:32])
 
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE username=? AND passhash=? LIMIT 1;
+		SELECT id FROM accounts WHERE username=$1 AND passhash=$2 LIMIT 1;
 	`, name, sumstr)
 
 	var id int // this is unused though
@@ -131,10 +132,10 @@ func (db *Database) CheckUserPassword(name string, passhash string) (bool, error
 // Always check if returned error is not-nil, as it returns false on errors
 func (db *Database) CheckUserPasswordID(id int, passhash string) (bool, error) {
 	sum := sha256.Sum256([]byte(passhash))
-	sumstr := string(sum[:32])
+	sumstr := fmt.Sprintf("%x", sum[:32])
 
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE id=? AND passhash=? LIMIT 1;
+		SELECT id FROM accounts WHERE id=$1 AND passhash=$2 LIMIT 1;
 	`, id, sumstr)
 
 	var _id int // this is unused though
@@ -151,7 +152,7 @@ func (db *Database) CheckUserPasswordID(id int, passhash string) (bool, error) {
 // IsUserOwner - checks if user with given name is an owner
 func (db *Database) IsUserOwner(name string) (bool, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE username=? AND owner=TRUE LIMIT 1;
+		SELECT id FROM accounts WHERE username=$1 AND owner=TRUE LIMIT 1;
 	`, name)
 
 	var id int // this is unused though
@@ -168,7 +169,7 @@ func (db *Database) IsUserOwner(name string) (bool, error) {
 // IsUserOwnerID - checks if user with given id is an owner
 func (db *Database) IsUserOwnerID(id int) (bool, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE id=? AND owner=TRUE LIMIT 1;
+		SELECT id FROM accounts WHERE id=$1 AND owner=TRUE LIMIT 1;
 	`, id)
 
 	var _id int // this is unused though
@@ -185,7 +186,7 @@ func (db *Database) IsUserOwnerID(id int) (bool, error) {
 // SetUserOwner - sets users owner status
 func (db *Database) SetUserOwner(name string, owner bool) error {
 	_, err := db.db.Exec(`
-		UPDATE accounts SET owner=? WHERE username=?;
+		UPDATE accounts SET owner=$1 WHERE username=$2;
 	`, owner, name)
 
 	if err != nil {
@@ -198,7 +199,7 @@ func (db *Database) SetUserOwner(name string, owner bool) error {
 // SetUserOwnerID - sets users owner status
 func (db *Database) SetUserOwnerID(id int, owner bool) error {
 	_, err := db.db.Exec(`
-		UPDATE accounts SET owner=? WHERE id=?;
+		UPDATE accounts SET owner=$1 WHERE id=$2;
 	`, owner, id)
 
 	if err != nil {

@@ -7,20 +7,36 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// ConnInfo - stores some info about a connection
+type ConnInfo struct {
+	messageStream chan<- BaseMessage
+	loggedIn      bool
+	username      string
+}
+
 // handleConnection Handles users which are connected to Melodious
 func handleConnection(mel *Melodious, conn *websocket.Conn) {
 
 	messageStream := make(chan BaseMessage)
 
-	messageHandler := func(msg BaseMessage) {
+	connInfo := &ConnInfo{
+		messageStream: messageStream,
+		loggedIn:      false,
+		username:      "<unknown>",
+	}
+
+	mh := func(msg BaseMessage) {
 		fmt.Printf(msg.GetType()+" %U\n", msg)
-		messageHandler(mel, messageStream, msg)
+		messageHandler(mel, connInfo, msg)
 	}
 
 	connDead := make(chan bool)
 
 	conn.SetCloseHandler(func(code int, text string) error {
 		connDead <- true
+		if connInfo.loggedIn {
+			mel.RemoveConnection(connInfo.username, connInfo)
+		}
 		log.WithFields(log.Fields{"code": code, "text": text}).Info("one of my connections is closed now")
 		return nil
 	})
@@ -55,7 +71,7 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 					log.WithField("err", err).Error("cannot process a JSON message")
 					return
 				}
-				go messageHandler(msg)
+				go mh(msg)
 			}()
 		}
 	}()
