@@ -15,12 +15,17 @@ type Database struct {
 
 // RegisterUser - adds a new user to the database
 func (db *Database) RegisterUser(name string, passhash string) error {
+	return db.RegisterUserAdmin(name, passhash, false)
+}
+
+// RegisterUserAdmin - adds a new user to the database, possibly admin
+func (db *Database) RegisterUserAdmin(name string, passhash string, admin bool) error {
 	sum := sha256.Sum256([]byte(passhash))
 	sumstr := string(sum[:32])
 
 	_, err := db.db.Exec(`
-		INSERT INTO accounts (username, passhash) VALUES (?, ?);
-	`, name, sumstr)
+		INSERT INTO accounts (username, passhash, admin) VALUES (?, ?, ?);
+	`, name, sumstr, admin)
 
 	if err != nil {
 		return err
