@@ -14,6 +14,23 @@ type Database struct {
 	db  *sql.DB
 }
 
+// HasUsers - checks if there are any users registered
+func (db *Database) HasUsers() (bool, error) {
+	row := db.db.QueryRow(`
+		SELECT id FROM accounts LIMIT 1;
+	`)
+
+	var id int
+	err := row.Scan(&id)
+	if err == sql.ErrNoRows {
+		return true, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	return false, err
+}
+
 // RegisterUser - adds a new user to the database
 func (db *Database) RegisterUser(name string, passhash string) error {
 	return db.RegisterUserOwner(name, passhash, false)
@@ -39,7 +56,7 @@ func (db *Database) RegisterUserOwner(name string, passhash string, owner bool) 
 // Always check if returned error is not nil, as it returns -1 on errors
 func (db *Database) GetUserID(name string) (int, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE username=?;
+		SELECT id FROM accounts WHERE username=? LIMIT 1;
 	`, name)
 
 	var id int
@@ -57,7 +74,7 @@ func (db *Database) GetUserID(name string) (int, error) {
 // Always check if returned error is not-nil, as it returns false on errors
 func (db *Database) UserExists(name string) (bool, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE username=?;
+		SELECT id FROM accounts WHERE username=? LIMIT 1;
 	`, name)
 
 	var id int // this is unused though
@@ -75,7 +92,7 @@ func (db *Database) UserExists(name string) (bool, error) {
 // Always check if returned error is not-nil, as it returns false on errors
 func (db *Database) UserExistsID(id int) (bool, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE id=?;
+		SELECT id FROM accounts WHERE id=? LIMIT 1;
 	`, id)
 
 	var _id int // this is unused though
@@ -96,7 +113,7 @@ func (db *Database) CheckUserPassword(name string, passhash string) (bool, error
 	sumstr := string(sum[:32])
 
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE username=? AND passhash=?;
+		SELECT id FROM accounts WHERE username=? AND passhash=? LIMIT 1;
 	`, name, sumstr)
 
 	var id int // this is unused though
@@ -117,7 +134,7 @@ func (db *Database) CheckUserPasswordID(id int, passhash string) (bool, error) {
 	sumstr := string(sum[:32])
 
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE id=? AND passhash=?;
+		SELECT id FROM accounts WHERE id=? AND passhash=? LIMIT 1;
 	`, id, sumstr)
 
 	var _id int // this is unused though
@@ -134,7 +151,7 @@ func (db *Database) CheckUserPasswordID(id int, passhash string) (bool, error) {
 // IsUserOwner - checks if user with given name is an owner
 func (db *Database) IsUserOwner(name string) (bool, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE username=? AND owner=TRUE;
+		SELECT id FROM accounts WHERE username=? AND owner=TRUE LIMIT 1;
 	`, name)
 
 	var id int // this is unused though
@@ -151,7 +168,7 @@ func (db *Database) IsUserOwner(name string) (bool, error) {
 // IsUserOwnerID - checks if user with given id is an owner
 func (db *Database) IsUserOwnerID(id int) (bool, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE id=? AND owner=TRUE;
+		SELECT id FROM accounts WHERE id=? AND owner=TRUE LIMIT 1;
 	`, id)
 
 	var _id int // this is unused though
