@@ -35,7 +35,10 @@ func (mel *Melodious) ConnectToDB() {
 // webServerRunner - An internal function used by RunWebServer
 func (mel *Melodious) webServerRunner() {
 	h := NewHTTPHandler(mel)
-	http.ListenAndServe(mel.Config.HTTPAddr, h)
+	err := http.ListenAndServe(mel.Config.HTTPAddr, h)
+	if err != nil {
+		log.WithField("err", err).Error("cannot serve")
+	}
 }
 
 // RunWebServer - starts an HTTP server

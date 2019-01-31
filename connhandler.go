@@ -9,7 +9,7 @@ import (
 
 // ConnInfo - stores some info about a connection
 type ConnInfo struct {
-	connection *websocket.Conn
+	connection    *websocket.Conn
 	messageStream chan<- BaseMessage
 	loggedIn      bool
 	username      string
@@ -21,7 +21,7 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 	messageStream := make(chan BaseMessage)
 
 	connInfo := &ConnInfo{
-		connection: conn,
+		connection:    conn,
 		messageStream: messageStream,
 		loggedIn:      false,
 		username:      "<unknown>",
@@ -37,9 +37,16 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 		connDead <- true
 		if connInfo.loggedIn {
 			mel.RemoveConnection(connInfo.username, connInfo)
-			log.WithFields(log.Fields{"username": connInfo.username}).Info("somebody has disconnected")
+			log.WithFields(log.Fields{
+				"addr":     conn.RemoteAddr().String(),
+				"username": connInfo.username,
+			}).Info("somebody has disconnected")
 		}
-		log.WithFields(log.Fields{"code": code, "text": text}).Info("one of my connections is closed now")
+		log.WithFields(log.Fields{
+			"code": code,
+			"text": text,
+			"addr": conn.RemoteAddr().String(),
+		}).Info("one of my connections is closed now")
 		return nil
 	})
 
@@ -52,7 +59,11 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 				defer func() {
 					if err := recover(); err != nil {
 						messageStream <- &MessageFail{Message: fmt.Sprintf("%U", err)}
-						log.WithField("err", err).Error("panic while receiving a message")
+						log.WithFields(log.Fields{
+							"addr": conn.RemoteAddr().String(),
+							"name": connInfo.username,
+							"err":  err,
+						}).Error("panic while receiving a message")
 						running = false
 					}
 				}()
@@ -62,7 +73,11 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 				var iface map[string]interface{}
 				err := conn.ReadJSON(&iface)
 				if err != nil {
-					log.WithField("err", err).Error("cannot read a JSON message")
+					log.WithFields(log.Fields{
+						"addr": conn.RemoteAddr().String(),
+						"name": connInfo.username,
+						"err":  err,
+					}).Error("cannot read a JSON message")
 				}
 				if !running {
 					return
@@ -70,8 +85,21 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 				msg, err := LoadMessage(iface)
 				if err != nil {
 					messageStream <- &MessageFail{Message: err.Error()}
-					log.WithField("err", err).Error("cannot process a JSON message")
+					log.WithFields(log.Fields{
+						"addr": conn.RemoteAddr().String(),
+						"name": connInfo.username,
+						"err":  err,
+					}).Error("cannot process a JSON message")
 					return
+				}
+				switch msg.(type) {
+				case *MessageQuit:
+					log.WithFields(log.Fields{
+						"addr": conn.RemoteAddr().String(),
+						"name": connInfo.username,
+					}).Info("somebody wants to disconnect")
+					running = false
+					conn.Close()
 				}
 				go mh(msg)
 			}()
@@ -88,7 +116,11 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 				func() {
 					defer func() {
 						if err := recover(); err != nil {
-							log.WithField("err", err).Error("panic while sending a message")
+							log.WithFields(log.Fields{
+								"addr": conn.RemoteAddr().String(),
+								"name": connInfo.username,
+								"err":  err,
+							}).Error("panic while sending a message")
 							running = false
 						}
 					}()
@@ -97,7 +129,11 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 					}
 					iface, err := MessageToIface(msg)
 					if err != nil {
-						log.WithField("err", err).Error("cannot convert message to a map[string]interface{}")
+						log.WithFields(log.Fields{
+							"addr": conn.RemoteAddr().String(),
+							"name": connInfo.username,
+							"err":  err,
+						}).Error("cannot convert message to a map[string]interface{}")
 						return
 					}
 					if !running {
@@ -105,7 +141,27 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 					}
 					err = conn.WriteJSON(iface)
 					if err != nil {
-						log.WithField("err", err).Error("unable to write JSON message")
+						log.WithFields(log.Fields{
+							"addr": conn.RemoteAddr().String(),
+							"name": connInfo.username,
+							"err":  err,
+						}).Error("unable to write JSON message")
+					}
+					switch msg.(type) {
+					case *MessageQuit:
+						log.WithFields(log.Fields{
+							"addr": conn.RemoteAddr().String(),
+							"name": connInfo.username,
+						}).Info("disconnecting somebody")
+						running = false
+						conn.Close()
+					case *MessageFatal:
+						log.WithFields(log.Fields{
+							"addr": conn.RemoteAddr().String(),
+							"name": connInfo.username,
+						}).Info("fatal error")
+						running = false
+						conn.Close()
 					}
 				}()
 			}

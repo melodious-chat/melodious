@@ -11,14 +11,36 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage) {
 			return
 		}
 		m := message.(*MessageRegister)
-		err := mel.Database.RegisterUser(m.Name, m.Pass)
+		exists, err := mel.Database.UserExists(m.Name)
 		if err != nil {
-			connInfo.messageStream <- &MessageFail{Message: err.Error()}
+			log.WithFields(log.Fields{
+				"addr": connInfo.connection.RemoteAddr().String(),
+				"name": m.Name,
+				"err":  err,
+			}).Error("error when checking if given user exists")
+			connInfo.messageStream <- &MessageFatal{Message: "sorry, an internal database error has occured"}
+			return
+		}
+		if exists {
+			connInfo.messageStream <- &MessageFail{Message: "sorry, but there's already such a user with this nickname"}
+			return
+		}
+		err = mel.Database.RegisterUser(m.Name, m.Pass)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"addr": connInfo.connection.RemoteAddr().String(),
+				"name": m.Name,
+				"err":  err,
+			}).Error("error when registering a user")
+			connInfo.messageStream <- &MessageFatal{Message: "sorry, an internal database error has occured"}
 		} else {
 			connInfo.username = m.Name
 			connInfo.loggedIn = true
 			mel.PutConnection(m.Name, connInfo)
-			log.WithFields(log.Fields{"username": m.Name}).Info("somebody has registered")
+			log.WithFields(log.Fields{
+				"addr": connInfo.connection.RemoteAddr().String(),
+				"name": m.Name,
+			}).Info("somebody has registered")
 			connInfo.messageStream <- &MessageOk{Message: "done; you are now logged in"}
 		}
 	case *MessageLogin:
@@ -34,13 +56,13 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage) {
 			connInfo.username = m.Name
 			connInfo.loggedIn = true
 			mel.PutConnection(m.Name, connInfo)
-			log.WithFields(log.Fields{"username": m.Name}).Info("somebody has logged in")
+			log.WithFields(log.Fields{
+				"addr": connInfo.connection.RemoteAddr().String(),
+				"name": m.Name,
+			}).Info("somebody has logged in")
 			connInfo.messageStream <- &MessageOk{Message: "done; you are now logged in"}
 		}
 	case *MessageQuit:
-		if connInfo.loggedIn {
-			connInfo.loggedIn = false
-		}
 		connInfo.connection.Close()
 	}
 }
