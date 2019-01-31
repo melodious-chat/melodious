@@ -49,9 +49,6 @@ An example config file:
 ## Current To-Do list
 
 * Implement a working prototype
-  * Implement authentication
-    * Get a working connection map (`*sync.Map`)
-    * Implement `register` and `login` messages
   * Implement messaging
   * Allow uploading and receiving images
 * Add a REST API for those who cannot use websockets
