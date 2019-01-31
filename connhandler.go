@@ -9,12 +9,16 @@ import (
 
 // handleConnection Handles users which are connected to Melodious
 func handleConnection(mel *Melodious, conn *websocket.Conn) {
-	// receivedPong := false
 
 	messageStream := make(chan BaseMessage)
 
 	messageHandler := func(msg BaseMessage) {
-		fmt.Printf("%U\n", msg)
+		fmt.Printf(msg.GetType() + " %U\n", msg)
+		switch msg.(type) {
+			case *MessageRegister: messageStream <- &MessageFail{Message: "not implemented"}
+			case *MessageLogin: messageStream <- &MessageFail{Message: "not implemented"}
+			// todo
+		}
 	}
 
 	connDead := make(chan bool)
