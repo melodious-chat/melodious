@@ -16,17 +16,17 @@ type Database struct {
 
 // RegisterUser - adds a new user to the database
 func (db *Database) RegisterUser(name string, passhash string) error {
-	return db.RegisterUserAdmin(name, passhash, false)
+	return db.RegisterUserOwner(name, passhash, false)
 }
 
-// RegisterUserAdmin - adds a new user to the database, possibly admin
-func (db *Database) RegisterUserAdmin(name string, passhash string, admin bool) error {
+// RegisterUserOwner - adds a new user to the database, possibly owner
+func (db *Database) RegisterUserOwner(name string, passhash string, owner bool) error {
 	sum := sha256.Sum256([]byte(passhash))
 	sumstr := string(sum[:32])
 
 	_, err := db.db.Exec(`
-		INSERT INTO accounts (username, passhash, admin) VALUES (?, ?, ?);
-	`, name, sumstr, admin)
+		INSERT INTO accounts (username, passhash, owner) VALUES (?, ?, ?);
+	`, name, sumstr, owner)
 
 	if err != nil {
 		return err
@@ -131,10 +131,10 @@ func (db *Database) CheckUserPasswordID(id int, passhash string) (bool, error) {
 	return true, nil
 }
 
-// IsUserAdmin - checks if user with given name is an admin
-func (db *Database) IsUserAdmin(name string) (bool, error) {
+// IsUserOwner - checks if user with given name is an owner
+func (db *Database) IsUserOwner(name string) (bool, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE username=? AND admin=TRUE;
+		SELECT id FROM accounts WHERE username=? AND owner=TRUE;
 	`, name)
 
 	var id int // this is unused though
@@ -148,10 +148,10 @@ func (db *Database) IsUserAdmin(name string) (bool, error) {
 	return true, nil
 }
 
-// IsUserAdminID - checks if user with given id is an admin
-func (db *Database) IsUserAdminID(id int) (bool, error) {
+// IsUserOwnerID - checks if user with given id is an owner
+func (db *Database) IsUserOwnerID(id int) (bool, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE id=? AND admin=TRUE;
+		SELECT id FROM accounts WHERE id=? AND owner=TRUE;
 	`, id)
 
 	var _id int // this is unused though
@@ -165,11 +165,11 @@ func (db *Database) IsUserAdminID(id int) (bool, error) {
 	return true, nil
 }
 
-// SetUserAdmin - sets users admin status
-func (db *Database) SetUserAdmin(name string, admin bool) error {
+// SetUserOwner - sets users owner status
+func (db *Database) SetUserOwner(name string, owner bool) error {
 	_, err := db.db.Exec(`
-		UPDATE accounts SET admin=? WHERE username=?;
-	`, admin, name)
+		UPDATE accounts SET owner=? WHERE username=?;
+	`, owner, name)
 
 	if err != nil {
 		return err
@@ -178,11 +178,11 @@ func (db *Database) SetUserAdmin(name string, admin bool) error {
 	return nil
 }
 
-// SetUserAdminID - sets users admin status
-func (db *Database) SetUserAdminID(id int, admin bool) error {
+// SetUserOwnerID - sets users owner status
+func (db *Database) SetUserOwnerID(id int, owner bool) error {
 	_, err := db.db.Exec(`
-		UPDATE accounts SET admin=? WHERE id=?;
-	`, admin, id)
+		UPDATE accounts SET owner=? WHERE id=?;
+	`, owner, id)
 
 	if err != nil {
 		return err
@@ -200,7 +200,7 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 			id serial PRIMARY KEY,
 			username varchar(32) UNIQUE,
 			passhash varchar(64),
-			admin BOOLEAN
+			owner BOOLEAN
 		);`)
 	if err != nil {
 		return nil, err
