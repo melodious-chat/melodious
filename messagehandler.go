@@ -13,7 +13,14 @@ func messageHandler(mel *Melodious, messageStream chan<- BaseMessage, message Ba
 
 // wrapMessageHandler - wraps a message handler to allow passing it without explicitly passing some context-specific data
 func wrapMessageHandler(
-	mel *Melodious, messageStream <-chan BaseMessage, f func(mel *Melodious, messageStream <-chan BaseMessage, message BaseMessage)) func(BaseMessage) {
+	mel *Melodious,
+	messageStream chan<- BaseMessage,
+	f func(
+		mel *Melodious,
+		messageStream chan<- BaseMessage,
+		message BaseMessage,
+	),
+) func(BaseMessage) {
 	return func(message BaseMessage) {
 		f(mel, messageStream, message)
 	}

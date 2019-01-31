@@ -76,7 +76,8 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 		CREATE TABLE IF NOT EXISTS accounts (
 			id serial PRIMARY KEY,
 			username varchar(32) UNIQUE,
-			passhash varchar(64)
+			passhash varchar(64),
+			admin BOOLEAN
 		);`)
 	if err != nil {
 		return nil, err
