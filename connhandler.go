@@ -14,11 +14,7 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 
 	messageHandler := func(msg BaseMessage) {
 		fmt.Printf(msg.GetType() + " %U\n", msg)
-		switch msg.(type) {
-			case *MessageRegister: messageStream <- &MessageFail{Message: "not implemented"}
-			case *MessageLogin: messageStream <- &MessageFail{Message: "not implemented"}
-			// todo
-		}
+		handler(mel, messageStream, msg)
 	}
 
 	connDead := make(chan bool)
