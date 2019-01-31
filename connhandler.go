@@ -13,7 +13,7 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 	messageStream := make(chan BaseMessage)
 
 	messageHandler := func(msg BaseMessage) {
-		fmt.Printf(msg.GetType() + " %U\n", msg)
+		fmt.Printf(msg.GetType()+" %U\n", msg)
 		handler(mel, messageStream, msg)
 	}
 
