@@ -37,6 +37,11 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage) {
 			log.WithFields(log.Fields{"username": m.Name}).Info("somebody has logged in")
 			connInfo.messageStream <- &MessageOk{Message: "done; you are now logged in"}
 		}
+	case *MessageQuit:
+		if connInfo.loggedIn {
+			connInfo.loggedIn = false
+		}
+		connInfo.connection.Close()
 	}
 }
 

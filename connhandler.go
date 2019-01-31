@@ -9,6 +9,7 @@ import (
 
 // ConnInfo - stores some info about a connection
 type ConnInfo struct {
+	connection *websocket.Conn
 	messageStream chan<- BaseMessage
 	loggedIn      bool
 	username      string
@@ -20,6 +21,7 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 	messageStream := make(chan BaseMessage)
 
 	connInfo := &ConnInfo{
+		connection: conn,
 		messageStream: messageStream,
 		loggedIn:      false,
 		username:      "<unknown>",
