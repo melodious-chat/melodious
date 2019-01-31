@@ -26,7 +26,6 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 	}
 
 	mh := func(msg BaseMessage) {
-		fmt.Printf(msg.GetType()+" %U\n", msg)
 		messageHandler(mel, connInfo, msg)
 	}
 
@@ -36,6 +35,7 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 		connDead <- true
 		if connInfo.loggedIn {
 			mel.RemoveConnection(connInfo.username, connInfo)
+			log.WithFields(log.Fields{"username": connInfo.username}).Info("somebody has disconnected")
 		}
 		log.WithFields(log.Fields{"code": code, "text": text}).Info("one of my connections is closed now")
 		return nil

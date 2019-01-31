@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
 	"sync"
+
+	"github.com/apex/log"
 )
 
 // Melodious - root structure
@@ -41,6 +43,7 @@ func (mel *Melodious) RunWebServer() <-chan bool {
 	done := make(chan bool)
 
 	go func() {
+		log.WithField("addr", mel.Config.HTTPAddr).Info("serving")
 		mel.webServerRunner()
 		done <- true
 	}()

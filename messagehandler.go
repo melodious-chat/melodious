@@ -1,5 +1,7 @@
 package main
 
+import "github.com/apex/log"
+
 // messageHandler - handles messages received from users
 func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage) {
 	switch message.(type) {
@@ -16,6 +18,7 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage) {
 			connInfo.username = m.Name
 			connInfo.loggedIn = true
 			mel.PutConnection(m.Name, connInfo)
+			log.WithFields(log.Fields{"username": m.Name}).Info("somebody has registered")
 			connInfo.messageStream <- &MessageOk{Message: "done; you are now logged in"}
 		}
 	case *MessageLogin:
@@ -31,6 +34,7 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage) {
 			connInfo.username = m.Name
 			connInfo.loggedIn = true
 			mel.PutConnection(m.Name, connInfo)
+			log.WithFields(log.Fields{"username": m.Name}).Info("somebody has logged in")
 			connInfo.messageStream <- &MessageOk{Message: "done; you are now logged in"}
 		}
 	}
