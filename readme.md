@@ -49,6 +49,6 @@ An example config file:
 ## Current To-Do list
 
 * Implement a working prototype
-  * Implement messaging
+  * Implement channels
   * Allow uploading and receiving images
 * Add a REST API for those who cannot use websockets
