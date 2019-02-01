@@ -6,7 +6,8 @@ Communication is established over a WebSocket _connection_ with JSON _messages_ 
 
 Each message is a JSON document which necessarily has `type` field which describes message type
 
-Each message MAY have an `_id` field. All responses to such message MUST contain the same `_id`
+Each message MAY have an `_id` field. All responses to such message MUST contain the same `_id`.
+If length of the id is more than 64 characters, then only first 64 characters are used. 
 
 ### quit (sent by server and client)
 
