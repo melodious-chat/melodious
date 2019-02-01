@@ -27,7 +27,6 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage) {
 		}
 		hasusers, err := mel.Database.HasUsers()
 		firstrun := !hasusers
-		log.WithFields(log.Fields{"firstrun":firstrun,"hasusers":hasusers,"err":err}).Info("")
 		if err != nil {
 			log.WithFields(log.Fields{
 				"addr": connInfo.connection.RemoteAddr().String(),
