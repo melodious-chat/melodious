@@ -247,7 +247,8 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 		CREATE TABLE IF NOT EXISTS melodious.messages (
 			id serial NOT NULL PRIMARY KEY,
 			chan_id int4 NOT NULL REFERENCES melodious.channels(id) ON DELETE CASCADE,
-			message varchar(2048) NOT NULL
+			message varchar(2048) NOT NULL,
+			pings varchar(32) []
 		);`)
 	if err != nil {
 		return nil, err
@@ -279,6 +280,7 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS melodious.group_flags (
 			group_id int4 REFERENCES melodious.groups(id) ON DELETE CASCADE,
+			name varchar(32) NOT NULL,
 			flag json NOT NULL
 		);`)
 	if err != nil {
