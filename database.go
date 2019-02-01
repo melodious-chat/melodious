@@ -24,12 +24,12 @@ func (db *Database) HasUsers() (bool, error) {
 	var id int
 	err := row.Scan(&id)
 	if err == sql.ErrNoRows {
-		return true, nil
+		return false, nil
 	} else if err != nil {
 		return false, err
 	}
 
-	return false, err
+	return true, err
 }
 
 // RegisterUser - adds a new user to the database

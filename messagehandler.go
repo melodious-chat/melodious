@@ -25,7 +25,21 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage) {
 			connInfo.messageStream <- &MessageFail{Message: "sorry, but there's already such a user with this nickname"}
 			return
 		}
-		err = mel.Database.RegisterUser(m.Name, m.Pass)
+		hasusers, err := mel.Database.HasUsers()
+		firstrun := !hasusers
+		log.WithFields(log.Fields{"firstrun":firstrun,"hasusers":hasusers,"err":err}).Info("")
+		if err != nil {
+			log.WithFields(log.Fields{
+				"addr": connInfo.connection.RemoteAddr().String(),
+				"name": m.Name,
+				"err":  err,
+			}).Error("error when checking if database has users")
+			connInfo.messageStream <- &MessageFatal{Message: "sorry, an internal database error has occured"}
+		} else if firstrun {
+			err = mel.Database.RegisterUserOwner(m.Name, m.Pass, true)
+		} else {
+			err = mel.Database.RegisterUser(m.Name, m.Pass)
+		}
 		if err != nil {
 			log.WithFields(log.Fields{
 				"addr": connInfo.connection.RemoteAddr().String(),
@@ -41,7 +55,13 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage) {
 				"addr": connInfo.connection.RemoteAddr().String(),
 				"name": m.Name,
 			}).Info("somebody has registered")
+			if firstrun {
+				log.Info("first run: registering as owner")
+			}
 			connInfo.messageStream <- &MessageOk{Message: "done; you are now logged in"}
+			if firstrun {
+				connInfo.messageStream <- &MessageNote{Message: "you became the server owner"}
+			}
 		}
 	case *MessageLogin:
 		if connInfo.loggedIn {
