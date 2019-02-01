@@ -224,6 +224,26 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 		return nil, err
 	}
 
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS channels (
+			id serial PRIMARY KEY,
+			name varchar(32) UNIQUE,
+			topic varchar(128)
+		);`)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS messages (
+			id serial PRIMARY KEY,
+			chan_id int4 REFERENCES channels(id) ON DELETE CASCADE,
+			message varchar(2048)
+		);`)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Database{
 		mel: mel,
 		db:  db,

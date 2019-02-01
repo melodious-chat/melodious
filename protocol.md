@@ -105,3 +105,16 @@ Server MAY introduce additional protection like banning users from connecting.
 If user has administrator privileges, server MUST send him a corresponding `note` message.
 
 It is recommended that server stores hash sum of the hash sum of the password to prevent heavy damage on database leak.
+
+### new-channel (sent by client)
+
+```json 
+{
+    "type": "new-channel",
+    "name": "<string>"
+}
+```
+
+name: channel name; maximum 32 characters
+
+Creates a new channel. If such channel already exists or user is not an owner, server MUST return a `fail` message.

@@ -183,6 +183,25 @@ func (m *MessageLogin) GetData() *MessageData {
 	return m.md
 }
 
+// MessageNewChannel - creates a new channel
+type MessageNewChannel struct {
+	md   *MessageData
+	Name string
+}
+
+// GetType - MessageNewChannel.
+func (m *MessageNewChannel) GetType() string {
+	return "new-channel"
+}
+
+// GetData - gets MessageData.
+func (m *MessageNewChannel) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	var msg BaseMessage
@@ -229,6 +248,11 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 			return nil, errors.New("no pass field in login message")
 		}
 		msg = &MessageLogin{Name: iface["name"].(string), Pass: iface["pass"].(string)}
+	case "new-channel":
+		if _, ok := iface["name"]; !ok {
+			return nil, errors.New("no name field in new-channel message")
+		}
+		msg = &MessageNewChannel{Name: iface["name"].(string)}
 	}
 
 	if msg != nil {
@@ -264,6 +288,8 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		out = map[string]interface{}{"type": "register", "name": msg.(*MessageRegister).Name, "pass": msg.(*MessageRegister).Pass}
 	case *MessageLogin:
 		out = map[string]interface{}{"type": "login", "name": msg.(*MessageLogin).Name, "pass": msg.(*MessageLogin).Pass}
+	case *MessageNewChannel:
+		out = map[string]interface{}{"type": "new-channel", "name": msg.(*MessageNewChannel).Name}
 	default:
 		return nil, errors.New("invalid type")
 	}
