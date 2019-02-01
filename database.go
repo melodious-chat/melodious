@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/apex/log"
 	_ "github.com/lib/pq"
 )
 
@@ -18,7 +19,7 @@ type Database struct {
 // HasUsers - checks if there are any users registered
 func (db *Database) HasUsers() (bool, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts LIMIT 1;
+		SELECT id FROM melodious.accounts LIMIT 1;
 	`)
 
 	var id int
@@ -43,7 +44,7 @@ func (db *Database) RegisterUserOwner(name string, passhash string, owner bool) 
 	sumstr := fmt.Sprintf("%x", sum[:32])
 
 	_, err := db.db.Exec(`
-		INSERT INTO accounts (username, passhash, owner) VALUES ($1, $2, $3);
+		INSERT INTO melodious.accounts (username, passhash, owner) VALUES ($1, $2, $3);
 	`, name, sumstr, owner)
 
 	if err != nil {
@@ -57,7 +58,7 @@ func (db *Database) RegisterUserOwner(name string, passhash string, owner bool) 
 // Always check if returned error is not nil, as it returns -1 on errors
 func (db *Database) GetUserID(name string) (int, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE username=$1 LIMIT 1;
+		SELECT id FROM melodious.accounts WHERE username=$1 LIMIT 1;
 	`, name)
 
 	var id int
@@ -75,7 +76,7 @@ func (db *Database) GetUserID(name string) (int, error) {
 // Always check if returned error is not-nil, as it returns false on errors
 func (db *Database) UserExists(name string) (bool, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE username=$1 LIMIT 1;
+		SELECT id FROM melodious.accounts WHERE username=$1 LIMIT 1;
 	`, name)
 
 	var id int // this is unused though
@@ -93,7 +94,7 @@ func (db *Database) UserExists(name string) (bool, error) {
 // Always check if returned error is not-nil, as it returns false on errors
 func (db *Database) UserExistsID(id int) (bool, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE id=$1 LIMIT 1;
+		SELECT id FROM melodious.accounts WHERE id=$1 LIMIT 1;
 	`, id)
 
 	var _id int // this is unused though
@@ -114,7 +115,7 @@ func (db *Database) CheckUserPassword(name string, passhash string) (bool, error
 	sumstr := fmt.Sprintf("%x", sum[:32])
 
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE username=$1 AND passhash=$2 LIMIT 1;
+		SELECT id FROM melodious.accounts WHERE username=$1 AND passhash=$2 LIMIT 1;
 	`, name, sumstr)
 
 	var id int // this is unused though
@@ -135,7 +136,7 @@ func (db *Database) CheckUserPasswordID(id int, passhash string) (bool, error) {
 	sumstr := fmt.Sprintf("%x", sum[:32])
 
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE id=$1 AND passhash=$2 LIMIT 1;
+		SELECT id FROM melodious.accounts WHERE id=$1 AND passhash=$2 LIMIT 1;
 	`, id, sumstr)
 
 	var _id int // this is unused though
@@ -152,7 +153,7 @@ func (db *Database) CheckUserPasswordID(id int, passhash string) (bool, error) {
 // IsUserOwner - checks if user with given name is an owner
 func (db *Database) IsUserOwner(name string) (bool, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE username=$1 AND owner=TRUE LIMIT 1;
+		SELECT id FROM melodious.accounts WHERE username=$1 AND owner=TRUE LIMIT 1;
 	`, name)
 
 	var id int // this is unused though
@@ -169,7 +170,7 @@ func (db *Database) IsUserOwner(name string) (bool, error) {
 // IsUserOwnerID - checks if user with given id is an owner
 func (db *Database) IsUserOwnerID(id int) (bool, error) {
 	row := db.db.QueryRow(`
-		SELECT id FROM accounts WHERE id=$1 AND owner=TRUE LIMIT 1;
+		SELECT id FROM melodious.accounts WHERE id=$1 AND owner=TRUE LIMIT 1;
 	`, id)
 
 	var _id int // this is unused though
@@ -186,7 +187,7 @@ func (db *Database) IsUserOwnerID(id int) (bool, error) {
 // SetUserOwner - sets users owner status
 func (db *Database) SetUserOwner(name string, owner bool) error {
 	_, err := db.db.Exec(`
-		UPDATE accounts SET owner=$1 WHERE username=$2;
+		UPDATE melodious.accounts SET owner=$1 WHERE username=$2;
 	`, owner, name)
 
 	if err != nil {
@@ -199,7 +200,7 @@ func (db *Database) SetUserOwner(name string, owner bool) error {
 // SetUserOwnerID - sets users owner status
 func (db *Database) SetUserOwnerID(id int, owner bool) error {
 	_, err := db.db.Exec(`
-		UPDATE accounts SET owner=$1 WHERE id=$2;
+		UPDATE melodious.accounts SET owner=$1 WHERE id=$2;
 	`, owner, id)
 
 	if err != nil {
@@ -213,36 +214,77 @@ func (db *Database) SetUserOwnerID(id int, owner bool) error {
 func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	db, err := sql.Open("postgres", addr)
 
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS accounts (
-			id serial PRIMARY KEY,
-			username varchar(32) UNIQUE,
-			passhash varchar(64),
-			owner BOOLEAN
-		);`)
+	_, err = db.Exec(`CREATE SCHEMA IF NOT EXISTS melodious;`)
 	if err != nil {
 		return nil, err
 	}
+	log.Info("DB: check/create melodious schema")
 
 	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS channels (
-			id serial PRIMARY KEY,
-			name varchar(32) UNIQUE,
-			topic varchar(128)
+		CREATE TABLE IF NOT EXISTS melodious.accounts (
+			id serial NOT NULL PRIMARY KEY,
+			username varchar(32) NOT NULL UNIQUE,
+			passhash varchar(64) NOT NULL,
+			owner BOOLEAN NOT NULL
 		);`)
 	if err != nil {
 		return nil, err
 	}
+	log.Info("DB: check/create accounts table")
 
 	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS messages (
-			id serial PRIMARY KEY,
-			chan_id int4 REFERENCES channels(id) ON DELETE CASCADE,
-			message varchar(2048)
+		CREATE TABLE IF NOT EXISTS melodious.channels (
+			id serial NOT NULL PRIMARY KEY,
+			name varchar(32) NOT NULL UNIQUE,
+			topic varchar(128) NOT NULL
 		);`)
 	if err != nil {
 		return nil, err
 	}
+	log.Info("DB: check/create channels table")
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS melodious.messages (
+			id serial NOT NULL PRIMARY KEY,
+			chan_id int4 NOT NULL REFERENCES melodious.channels(id) ON DELETE CASCADE,
+			message varchar(2048) NOT NULL
+		);`)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("DB: check/create messages table")
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS melodious.groups (
+			id serial NOT NULL PRIMARY KEY,
+			name varchar(32) NOT NULL
+		);`)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("DB: check/create groups table")
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS melodious.group_holders (
+			group_id int4 NOT NULL REFERENCES melodious.groups(id) ON DELETE CASCADE,
+			user_id int4 REFERENCES melodious.accounts(id) ON DELETE CASCADE,
+			channel_id int4 REFERENCES melodious.channels(id) ON DELETE CASCADE,
+			UNIQUE(group_id, user_id)
+		);`)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("DB: check/create group_holders table")
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS melodious.group_flags (
+			group_id int4 REFERENCES melodious.groups(id) ON DELETE CASCADE,
+			flag json NOT NULL
+		);`)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("DB: check/create group_flags table")
 
 	return &Database{
 		mel: mel,
