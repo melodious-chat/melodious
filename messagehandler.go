@@ -3,11 +3,11 @@ package main
 import "github.com/apex/log"
 
 // messageHandler - handles messages received from users
-func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage) {
+func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	switch message.(type) {
 	case *MessageRegister:
 		if connInfo.loggedIn {
-			connInfo.messageStream <- &MessageFail{Message: "you are already logged in"}
+			send(&MessageFail{Message: "you are already logged in"})
 			return
 		}
 		m := message.(*MessageRegister)
@@ -18,11 +18,11 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage) {
 				"name": m.Name,
 				"err":  err,
 			}).Error("error when checking if given user exists")
-			connInfo.messageStream <- &MessageFatal{Message: "sorry, an internal database error has occured"}
+			send(&MessageFatal{Message: "sorry, an internal database error has occured"})
 			return
 		}
 		if exists {
-			connInfo.messageStream <- &MessageFail{Message: "sorry, but there's already such a user with this nickname"}
+			send(&MessageFail{Message: "sorry, but there's already such a user with this nickname"})
 			return
 		}
 		hasusers, err := mel.Database.HasUsers()
@@ -33,7 +33,7 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage) {
 				"name": m.Name,
 				"err":  err,
 			}).Error("error when checking if database has users")
-			connInfo.messageStream <- &MessageFatal{Message: "sorry, an internal database error has occured"}
+			send(&MessageFatal{Message: "sorry, an internal database error has occured"})
 		} else if firstrun {
 			err = mel.Database.RegisterUserOwner(m.Name, m.Pass, true)
 		} else {
@@ -45,7 +45,7 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage) {
 				"name": m.Name,
 				"err":  err,
 			}).Error("error when registering a user")
-			connInfo.messageStream <- &MessageFatal{Message: "sorry, an internal database error has occured"}
+			send(&MessageFatal{Message: "sorry, an internal database error has occured"})
 		} else {
 			connInfo.username = m.Name
 			connInfo.loggedIn = true
@@ -57,20 +57,20 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage) {
 			if firstrun {
 				log.Info("first run: registering as owner")
 			}
-			connInfo.messageStream <- &MessageOk{Message: "done; you are now logged in"}
+			send(&MessageOk{Message: "done; you are now logged in"})
 			if firstrun {
-				connInfo.messageStream <- &MessageNote{Message: "you became the server owner"}
+				send(&MessageNote{Message: "you are the server owner now"})
 			}
 		}
 	case *MessageLogin:
 		if connInfo.loggedIn {
-			connInfo.messageStream <- &MessageFail{Message: "you are already logged in"}
+			send(&MessageFail{Message: "you are already logged in"})
 			return
 		}
 		m := message.(*MessageLogin)
 		ok, err := mel.Database.CheckUserPassword(m.Name, m.Pass)
 		if err != nil {
-			connInfo.messageStream <- &MessageFail{Message: err.Error()}
+			send(&MessageFail{Message: err.Error()})
 		} else if ok {
 			connInfo.username = m.Name
 			connInfo.loggedIn = true
@@ -79,7 +79,7 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage) {
 				"addr": connInfo.connection.RemoteAddr().String(),
 				"name": m.Name,
 			}).Info("somebody has logged in")
-			connInfo.messageStream <- &MessageOk{Message: "done; you are now logged in"}
+			send(&MessageOk{Message: "done; you are now logged in"})
 		}
 	case *MessageQuit:
 		connInfo.connection.Close()
@@ -94,9 +94,17 @@ func wrapMessageHandler(
 		mel *Melodious,
 		connInfo *ConnInfo,
 		message BaseMessage,
+		send func(BaseMessage),
 	),
 ) func(BaseMessage) {
 	return func(message BaseMessage) {
-		f(mel, connInfo, message)
+		send := func(m BaseMessage) {
+			if id, ok := message.GetData().GetID(); ok {
+				m.GetData().SetID(id)
+			}
+			connInfo.messageStream <- m
+		}
+
+		f(mel, connInfo, message, send)
 	}
 }

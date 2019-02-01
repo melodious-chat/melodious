@@ -27,9 +27,7 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 		username:      "<unknown>",
 	}
 
-	mh := func(msg BaseMessage) {
-		messageHandler(mel, connInfo, msg)
-	}
+	mh := wrapMessageHandler(mel, connInfo, messageHandler)
 
 	connDead := make(chan bool)
 
