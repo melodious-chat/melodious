@@ -7,7 +7,6 @@ import (
 // BaseMessage - A base struct for all messages
 type BaseMessage interface {
 	GetType() string
-	Validate() bool
 	GetData() *MessageData
 }
 
@@ -60,11 +59,6 @@ func (m *MessageQuit) GetType() string {
 	return "quit"
 }
 
-// Validate - MessageQuit.
-func (m *MessageQuit) Validate() bool {
-	return true
-}
-
 // GetData - gets MessageData.
 func (m *MessageQuit) GetData() *MessageData {
 	if m.md == nil {
@@ -82,11 +76,6 @@ type MessageFatal struct {
 // GetType - MessageFatal.
 func (m *MessageFatal) GetType() string {
 	return "fatal"
-}
-
-// Validate - MessageFatal.
-func (m *MessageFatal) Validate() bool {
-	return true
 }
 
 // GetData - gets MessageData.
@@ -108,11 +97,6 @@ func (m *MessageNote) GetType() string {
 	return "note"
 }
 
-// Validate - MessageNote.
-func (m *MessageNote) Validate() bool {
-	return true
-}
-
 // GetData - gets MessageData.
 func (m *MessageNote) GetData() *MessageData {
 	if m.md == nil {
@@ -132,11 +116,6 @@ func (m *MessageOk) GetType() string {
 	return "ok"
 }
 
-// Validate - MessageOk.
-func (m *MessageOk) Validate() bool {
-	return true
-}
-
 // GetData - gets MessageData.
 func (m *MessageOk) GetData() *MessageData {
 	if m.md == nil {
@@ -154,11 +133,6 @@ type MessageFail struct {
 // GetType - MessageFail.
 func (m *MessageFail) GetType() string {
 	return "fail"
-}
-
-// Validate - MessageFail.
-func (m *MessageFail) Validate() bool {
-	return true
 }
 
 // GetData - gets MessageData.
@@ -181,11 +155,6 @@ func (m *MessageRegister) GetType() string {
 	return "register"
 }
 
-// Validate - MessageRegister.
-func (m *MessageRegister) Validate() bool {
-	return true
-}
-
 // GetData - gets MessageData.
 func (m *MessageRegister) GetData() *MessageData {
 	if m.md == nil {
@@ -204,11 +173,6 @@ type MessageLogin struct {
 // GetType - MessageLogin.
 func (m *MessageLogin) GetType() string {
 	return "login"
-}
-
-// Validate - MessageLogin.
-func (m *MessageLogin) Validate() bool {
-	return true
 }
 
 // GetData - gets MessageData.
