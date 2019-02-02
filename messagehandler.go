@@ -85,6 +85,7 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 		}
 	case *MessageNewChannel:
 		cn, ct := message.(*MessageNewChannel).Name, message.(*MessageNewChannel).Topic
+		nc := &MessageNewChannel{Name: cn, Topic: ct}
 		owner, err := mel.Database.IsUserOwner(connInfo.username)
 		if err != nil {
 			send(&MessageFail{Message: "sorry, an internal database error has occured"})
@@ -104,12 +105,16 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 				}).Error("error when creating a channel")
 			} else {
 				send(&MessageOk{Message: "created a channel successfully"})
+				mel.IterateOverAllConnections(func(connInfo *ConnInfo) {
+					connInfo.messageStream <- nc
+				})
 			}
 		} else {
 			send(&MessageFail{Message: "no permissions"})
 		}
 	case *MessageDeleteChannel:
 		cn := message.(*MessageDeleteChannel).Name
+		dc := &MessageDeleteChannel{Name: cn}
 		owner, err := mel.Database.IsUserOwner(connInfo.username)
 		if err != nil {
 			send(&MessageFail{Message: "sorry, an internal database error has occured"})
@@ -129,6 +134,9 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 				}).Error("error when deleting a channel")
 			} else {
 				send(&MessageOk{Message: "deleted a channel successfully"})
+				mel.IterateOverAllConnections(func(connInfo *ConnInfo) {
+					connInfo.messageStream <- dc
+				})
 			}
 		} else {
 			send(&MessageFail{Message: "no permissions"})

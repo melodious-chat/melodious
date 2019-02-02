@@ -106,15 +106,33 @@ If user has administrator privileges, server MUST send him a corresponding `note
 
 It is recommended that server stores hash sum of the hash sum of the password to prevent heavy damage on database leak.
 
-### new-channel (sent by client)
+### new-channel
 
 ```json 
 {
     "type": "new-channel",
+    "name": "<string>",
+    "topic": "<string>"
+}
+```
+
+name: channel name; maximum 32 characters
+
+Sent by client: Creates a new channel. If such channel already exists or user is not an owner, server MUST return a `fail` message.
+
+Sent by server: Notifies about a new channel.
+
+### delete-channel
+
+```json 
+{
+    "type": "delete-channel",
     "name": "<string>"
 }
 ```
 
 name: channel name; maximum 32 characters
 
-Creates a new channel. If such channel already exists or user is not an owner, server MUST return a `fail` message.
+Sent by client: Deletes a channel.
+
+Sent by server: Notifies about a deleted channel. May mention non-existing channel.

@@ -90,3 +90,18 @@ func (mel *Melodious) IterateOverConnections(username string, f func(connInfo *C
 		})
 	}
 }
+
+// IterateOverAllConnections - iterates over all connections
+func (mel *Melodious) IterateOverAllConnections(f func(connInfo *ConnInfo)) {
+	mel.UserConns.Range(func(uname interface{}, m interface{}) bool {
+		if m := m.(*sync.Map); m != nil {
+			m.Range(func(key interface{}, value interface{}) bool {
+				if connInfo := key.(*ConnInfo); connInfo != nil {
+					f(connInfo)
+				}
+				return true
+			})
+		}
+		return true
+	})
+}

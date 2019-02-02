@@ -319,7 +319,7 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 	case *MessageNewChannel:
 		out = map[string]interface{}{"type": "new-channel", "name": msg.(*MessageNewChannel).Name, "topic": msg.(*MessageNewChannel).Topic}
 	case *MessageDeleteChannel:
-		out = map[string]interface{}{"type": "delete-channel", "name": msg.(*MessageNewChannel).Name}
+		out = map[string]interface{}{"type": "delete-channel", "name": msg.(*MessageDeleteChannel).Name}
 	default:
 		return nil, errors.New("invalid type")
 	}
