@@ -181,6 +181,36 @@ func handleQuitMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, 
 	connInfo.connection.Close()
 }
 
+func handleSubscribeMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	connInfo.subscriptions.Store(message.(*MessageSubscribe).Name, message.(*MessageSubscribe).Subbed)
+	if message.(*MessageSubscribe).Subbed {
+		send(&MessageOk{Message: "subscribed to channel " + message.(*MessageSubscribe).Name})
+	} else {
+		send(&MessageOk{Message: "unsubscribed from channel " + message.(*MessageSubscribe).Name})
+	}
+}
+
+func handlePostMsgMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	author := connInfo.username
+	err := mel.Database.PostMessage(message.(*MessagePostMsg).Channel, message.(*MessagePostMsg).Content, []string{""}, author) // todo pings
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when posting a message")
+	} else {
+		mel.IterateOverAllConnections(func(connInfo *ConnInfo) {
+			if subbed, ok := connInfo.subscriptions.Load(message.(*MessagePostMsg).Channel); subbed == true && ok {
+				connInfo.messageStream <- &MessagePostMsg{Content: message.(*MessagePostMsg).Content, Channel: message.(*MessagePostMsg).Channel, Author: author}
+				//connInfo.messageStream <- message
+			}
+		})
+		send(&MessageOk{Message: "message sent to channel " + message.(*MessagePostMsg).Channel})
+	}
+}
+
 // messageHandler - handles messages received from users
 func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	switch message.(type) {
@@ -196,6 +226,10 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 		handleDeleteChannelMessage(mel, connInfo, message, send)
 	case *MessageQuit:
 		handleQuitMessage(mel, connInfo, message, send)
+	case *MessageSubscribe:
+		handleSubscribeMessage(mel, connInfo, message, send)
+	case *MessagePostMsg:
+		handlePostMsgMessage(mel, connInfo, message, send)
 	}
 }
 

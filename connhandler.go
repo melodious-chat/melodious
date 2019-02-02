@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
@@ -11,6 +12,7 @@ import (
 type ConnInfo struct {
 	connection    *websocket.Conn
 	messageStream chan<- BaseMessage
+	subscriptions *sync.Map
 	loggedIn      bool
 	username      string
 }
@@ -23,6 +25,7 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 	connInfo := &ConnInfo{
 		connection:    conn,
 		messageStream: messageStream,
+		subscriptions: &sync.Map{},
 		loggedIn:      false,
 		username:      "<unknown>",
 	}

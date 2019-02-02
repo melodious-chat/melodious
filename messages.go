@@ -203,7 +203,7 @@ func (m *MessageNewChannel) GetData() *MessageData {
 	return m.md
 }
 
-// MessageDeleteChannel - creates a new channel
+// MessageDeleteChannel - deletes a channel
 type MessageDeleteChannel struct {
 	md   *MessageData
 	Name string
@@ -222,7 +222,7 @@ func (m *MessageDeleteChannel) GetData() *MessageData {
 	return m.md
 }
 
-// MessageChannelTopic - creates a new channel
+// MessageChannelTopic - changes a channel's topic
 type MessageChannelTopic struct {
 	md    *MessageData
 	Name  string
@@ -236,6 +236,48 @@ func (m *MessageChannelTopic) GetType() string {
 
 // GetData - gets MessageData.
 func (m *MessageChannelTopic) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
+// MessageSubscribe - subscribes to a channel
+type MessageSubscribe struct {
+	md   *MessageData
+	Name string
+	//Id string // todo id channel parsing
+	Subbed bool
+}
+
+// GetType - MessageSubscribe.
+func (m *MessageSubscribe) GetType() string {
+	return "subscribe"
+}
+
+// GetData - gets MessageData.
+func (m *MessageSubscribe) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
+// MessagePostMsg - sends a message to a channel
+type MessagePostMsg struct {
+	md      *MessageData
+	Content string
+	Channel string
+	Author  string
+}
+
+// GetType - MessagePostMsg.
+func (m *MessagePostMsg) GetType() string {
+	return "post-message"
+}
+
+// GetData - gets MessageData.
+func (m *MessagePostMsg) GetData() *MessageData {
 	if m.md == nil {
 		m.md = &MessageData{}
 	}
@@ -309,6 +351,25 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 			return nil, errors.New("no topic field in channel-topic message")
 		}
 		msg = &MessageChannelTopic{Name: iface["name"].(string), Topic: iface["topic"].(string)}
+	case "subscribe":
+		if _, ok := iface["name"]; !ok {
+			return nil, errors.New("no name field in subscribe message")
+		}
+		if _, ok := iface["subbed"]; !ok {
+			return nil, errors.New("no subbed field in subscribe message")
+		}
+		msg = &MessageSubscribe{Name: iface["name"].(string), Subbed: iface["subbed"].(bool)}
+	case "post-message":
+		if _, ok := iface["content"]; !ok {
+			return nil, errors.New("no content field in send-message message")
+		}
+		if _, ok := iface["channel"]; !ok {
+			return nil, errors.New("no channel field in send-message message")
+		}
+		if _, ok := iface["author"]; !ok {
+			return nil, errors.New("no author field in post-message message")
+		}
+		msg = &MessagePostMsg{Content: iface["content"].(string), Channel: iface["channel"].(string), Author: iface["author"].(string)}
 	}
 
 	if msg != nil {
@@ -350,6 +411,10 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		out = map[string]interface{}{"type": "delete-channel", "name": msg.(*MessageDeleteChannel).Name}
 	case *MessageChannelTopic:
 		out = map[string]interface{}{"type": "channel-topic", "name": msg.(*MessageChannelTopic).Name, "topic": msg.(*MessageChannelTopic).Topic}
+	case *MessageSubscribe:
+		out = map[string]interface{}{"type": "subscribe", "name": msg.(*MessageSubscribe).Name, "subbed": msg.(*MessageSubscribe).Subbed}
+	case *MessagePostMsg:
+		out = map[string]interface{}{"type": "post-message", "content": msg.(*MessagePostMsg).Content, "channel": msg.(*MessagePostMsg).Channel, "author": msg.(*MessagePostMsg).Author}
 	default:
 		return nil, errors.New("invalid type")
 	}

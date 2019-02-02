@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/apex/log"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 // Database - used to access the database
@@ -291,17 +291,18 @@ func (db *Database) DeleteOldMessages(period string) error {
 }
 
 // PostMessage - posts a new message
-func (db *Database) PostMessage(chanName string, message string, pings []string) error {
+func (db *Database) PostMessage(chanName string, message string, pings []string, author string) error {
 	_, err := db.db.Exec(`
 		INSERT INTO melodious.messages
-		(chan_id, message, dt, pings)
+		(chan_id, message, dt, pings, author)
 		VALUES (
 			(SELECT id FROM melodious.channels WHERE name=$1 LIMIT 1),
 			$2,
 			NOW(),
-			$3
+			$3,
+			$4
 		);
-	`, chanName, message, pings)
+	`, chanName, message, pq.Array(pings), author)
 	if err != nil {
 		return err
 	}
@@ -309,17 +310,18 @@ func (db *Database) PostMessage(chanName string, message string, pings []string)
 }
 
 // PostMessageChanID - posts a new message
-func (db *Database) PostMessageChanID(chanID int, message string, pings []string) error {
+func (db *Database) PostMessageChanID(chanID int, message string, pings []string, author string) error {
 	_, err := db.db.Exec(`
 		INSERT INTO melodious.messages
-		(chan_id, message, dt, pings)
+		(chan_id, message, dt, pings, author)
 		VALUES (
 			(SELECT id FROM melodious.channels WHERE id=$1 LIMIT 1),
 			$2,
 			NOW(),
-			$3
+			$3,
+			$4
 		);
-	`, chanID, message, pings)
+	`, chanID, message, pings, author)
 	if err != nil {
 		return err
 	}
@@ -365,7 +367,8 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 			chan_id int4 NOT NULL REFERENCES melodious.channels(id) ON DELETE CASCADE,
 			message varchar(2048) NOT NULL,
 			dt timestamp with time zone NOT NULL,
-			pings varchar(32) []
+			pings varchar(32) [],
+			author varchar(64)
 		);`)
 	if err != nil {
 		return nil, err
