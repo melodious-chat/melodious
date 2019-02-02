@@ -210,6 +210,74 @@ func (db *Database) SetUserOwnerID(id int, owner bool) error {
 	return nil
 }
 
+// NewChannel - creates a new channel
+func (db *Database) NewChannel(name string, topic string) error {
+	_, err := db.db.Exec(`
+		INSERT INTO melodious.channels (name, topic) VALUES ($1, $2);
+	`, name, topic)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// DeleteChannel - deletes given channel
+func (db *Database) DeleteChannel(name string) error {
+	_, err := db.db.Exec(`
+		DELETE FROM melodious.channels WHERE name=$1;
+	`, name)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// DeleteChannelID - deletes given channel by ID
+func (db *Database) DeleteChannelID(id int) error {
+	_, err := db.db.Exec(`
+		DELETE FROM melodious.channels WHERE id=$1;
+	`, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ListChannels - puts all channel names into a map
+func (db *Database) ListChannels() (map[string]int, error) {
+	rows, err := db.db.Query(`
+		SELECT name, id FROM melodious.channels;
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var m map[string]int
+
+	for rows.Next() {
+		var name string
+		var id int
+		if err := rows.Scan(&name, &id); err != nil {
+			return nil, err
+		}
+		m[name] = id
+	}
+
+	return m, nil
+}
+
+// SetChannelTopic - sets topic of the channel
+func (db *Database) SetChannelTopic(name string, topic string) error {
+	_, err := db.db.Exec(`
+		UPDATE melodious.channels SET topic=$2 WHERE name=$1;
+	`, name, topic)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // NewDatabase - creates a new Database instance
 func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	db, err := sql.Open("postgres", addr)
