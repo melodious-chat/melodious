@@ -2,6 +2,8 @@ package main
 
 import "github.com/apex/log"
 
+// Note: fatals are sent on database errors only in response to register and login
+
 // messageHandler - handles messages received from users
 func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	switch message.(type) {
@@ -59,7 +61,7 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 			}
 			send(&MessageOk{Message: "done; you are now logged in"})
 			if firstrun {
-				send(&MessageNote{Message: "you are the server owner now"})
+				send(&MessageNote{Message: "you are a server owner now"})
 			}
 		}
 	case *MessageLogin:
@@ -80,6 +82,56 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 				"name": m.Name,
 			}).Info("somebody has logged in")
 			send(&MessageOk{Message: "done; you are now logged in"})
+		}
+	case *MessageNewChannel:
+		cn, ct := message.(*MessageNewChannel).Name, message.(*MessageNewChannel).Topic
+		owner, err := mel.Database.IsUserOwner(connInfo.username)
+		if err != nil {
+			send(&MessageFail{Message: "sorry, an internal database error has occured"})
+			log.WithFields(log.Fields{
+				"addr": connInfo.connection.RemoteAddr().String(),
+				"name": connInfo.username,
+				"err":  err,
+			}).Error("error when checking if user is an owner")
+		} else if owner {
+			err = mel.Database.NewChannel(cn, ct)
+			if err != nil {
+				send(&MessageFail{Message: "sorry, an internal database error has occured"})
+				log.WithFields(log.Fields{
+					"addr": connInfo.connection.RemoteAddr().String(),
+					"name": connInfo.username,
+					"err":  err,
+				}).Error("error when creating a channel")
+			} else {
+				send(&MessageOk{Message: "created a channel successfully"})
+			}
+		} else {
+			send(&MessageFail{Message: "no permissions"})
+		}
+	case *MessageDeleteChannel:
+		cn := message.(*MessageDeleteChannel).Name
+		owner, err := mel.Database.IsUserOwner(connInfo.username)
+		if err != nil {
+			send(&MessageFail{Message: "sorry, an internal database error has occured"})
+			log.WithFields(log.Fields{
+				"addr": connInfo.connection.RemoteAddr().String(),
+				"name": connInfo.username,
+				"err":  err,
+			}).Error("error when checking if user is an owner")
+		} else if owner {
+			err = mel.Database.DeleteChannel(cn)
+			if err != nil {
+				send(&MessageFail{Message: "sorry, an internal database error has occured"})
+				log.WithFields(log.Fields{
+					"addr": connInfo.connection.RemoteAddr().String(),
+					"name": connInfo.username,
+					"err":  err,
+				}).Error("error when deleting a channel")
+			} else {
+				send(&MessageOk{Message: "deleted a channel successfully"})
+			}
+		} else {
+			send(&MessageFail{Message: "no permissions"})
 		}
 	case *MessageQuit:
 		connInfo.connection.Close()

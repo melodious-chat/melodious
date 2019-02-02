@@ -33,12 +33,14 @@ An example config file:
 {
     "db-addr": "postgres://handicraftsman:password@localhost/melodious?sslmode=disable",
     "http-addr": "0.0.0.0:8080",
-    "delete-history-every": "PT1H",
+    "delete-history-every": "1h",
     "store-history-for": "P1W"
 }
 ```
 
-`delete-history-every` and `store-history-for` are ISO 8601 duration string.
+`store-history-for` is a ISO 8601 duration string.
+
+`delete-history-every` is a duration string as described at https://golang.org/pkg/time/#ParseDuration
 
 ### Starting
 

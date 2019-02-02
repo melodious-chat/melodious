@@ -185,8 +185,9 @@ func (m *MessageLogin) GetData() *MessageData {
 
 // MessageNewChannel - creates a new channel
 type MessageNewChannel struct {
-	md   *MessageData
-	Name string
+	md    *MessageData
+	Name  string
+	Topic string
 }
 
 // GetType - MessageNewChannel.
@@ -196,6 +197,25 @@ func (m *MessageNewChannel) GetType() string {
 
 // GetData - gets MessageData.
 func (m *MessageNewChannel) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
+// MessageDeleteChannel - creates a new channel
+type MessageDeleteChannel struct {
+	md   *MessageData
+	Name string
+}
+
+// GetType - MessageDeleteChannel.
+func (m *MessageDeleteChannel) GetType() string {
+	return "delete-channel"
+}
+
+// GetData - gets MessageData.
+func (m *MessageDeleteChannel) GetData() *MessageData {
 	if m.md == nil {
 		m.md = &MessageData{}
 	}
@@ -252,7 +272,15 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 		if _, ok := iface["name"]; !ok {
 			return nil, errors.New("no name field in new-channel message")
 		}
-		msg = &MessageNewChannel{Name: iface["name"].(string)}
+		if _, ok := iface["topic"]; !ok {
+			return nil, errors.New("no topic field in new-channel message")
+		}
+		msg = &MessageNewChannel{Name: iface["name"].(string), Topic: iface["topic"].(string)}
+	case "delete-channel":
+		if _, ok := iface["name"]; !ok {
+			return nil, errors.New("no name field in new-channel message")
+		}
+		msg = &MessageDeleteChannel{Name: iface["name"].(string)}
 	}
 
 	if msg != nil {
@@ -289,7 +317,9 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 	case *MessageLogin:
 		out = map[string]interface{}{"type": "login", "name": msg.(*MessageLogin).Name, "pass": msg.(*MessageLogin).Pass}
 	case *MessageNewChannel:
-		out = map[string]interface{}{"type": "new-channel", "name": msg.(*MessageNewChannel).Name}
+		out = map[string]interface{}{"type": "new-channel", "name": msg.(*MessageNewChannel).Name, "topic": msg.(*MessageNewChannel).Topic}
+	case *MessageDeleteChannel:
+		out = map[string]interface{}{"type": "delete-channel", "name": msg.(*MessageNewChannel).Name}
 	default:
 		return nil, errors.New("invalid type")
 	}

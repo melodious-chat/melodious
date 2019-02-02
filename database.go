@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/apex/log"
 	_ "github.com/lib/pq"
@@ -278,6 +279,53 @@ func (db *Database) SetChannelTopic(name string, topic string) error {
 	return nil
 }
 
+// DeleteOldMessages - deletes old messages from the database
+func (db *Database) DeleteOldMessages(period string) error {
+	_, err := db.db.Exec(`
+		DELETE FROM melodious.messages WHERE dt < (NOW() - $1::INTERVAL);
+	`, period)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// PostMessage - posts a new message
+func (db *Database) PostMessage(chanName string, message string, pings []string) error {
+	_, err := db.db.Exec(`
+		INSERT INTO melodious.messages
+		(chan_id, message, dt, pings)
+		VALUES (
+			(SELECT id FROM melodious.channels WHERE name=$1 LIMIT 1),
+			$2,
+			NOW(),
+			$3
+		);
+	`, chanName, message, pings)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// PostMessageChanID - posts a new message
+func (db *Database) PostMessageChanID(chanID int, message string, pings []string) error {
+	_, err := db.db.Exec(`
+		INSERT INTO melodious.messages
+		(chan_id, message, dt, pings)
+		VALUES (
+			(SELECT id FROM melodious.channels WHERE id=$1 LIMIT 1),
+			$2,
+			NOW(),
+			$3
+		);
+	`, chanID, message, pings)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // NewDatabase - creates a new Database instance
 func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	db, err := sql.Open("postgres", addr)
@@ -316,6 +364,7 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 			id serial NOT NULL PRIMARY KEY,
 			chan_id int4 NOT NULL REFERENCES melodious.channels(id) ON DELETE CASCADE,
 			message varchar(2048) NOT NULL,
+			dt timestamp with time zone NOT NULL,
 			pings varchar(32) []
 		);`)
 	if err != nil {
@@ -358,8 +407,29 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	}
 	log.Info("DB: check/create group_flags table")
 
-	return &Database{
+	dbi := &Database{
 		mel: mel,
 		db:  db,
-	}, nil
+	}
+
+	go func() {
+		dhe, err := time.ParseDuration(mel.Config.DeleteHistoryEvery)
+		if err != nil {
+			log.WithField("err", err).Fatal("cannot parse duration")
+		}
+		shf := mel.Config.StoreHistoryFor
+		for {
+			func() {
+				var err error
+				defer log.WithFields(log.Fields{
+					"storing-for":    shf,
+					"deleting-every": dhe,
+				}).Trace("deleting old messages").Stop(&err)
+				err = dbi.DeleteOldMessages(shf)
+			}()
+			time.Sleep(dhe)
+		}
+	}()
+
+	return dbi, nil
 }
