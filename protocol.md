@@ -136,3 +136,41 @@ name: channel name; maximum 32 characters
 Sent by client: Deletes a channel.
 
 Sent by server: Notifies about a deleted channel. May mention non-existing channel.
+
+### subscribe (sent by client)
+
+```json
+{
+    "type": "subscribe",
+    "name": "<string>",
+    "subbed": <bool>
+}
+```
+
+name: channel name; maximum 32 characters
+
+subbed: true or false maps to subscribed or unsubscribed respectively
+
+(Un)Subscribes to a channel. "post-message" (below) messages will be sent to the client by the server from other clients accordingly.
+
+### post-message
+
+```json
+{
+    "type": "post-message",
+    "content": "<string>",
+    "channel": "<string>",
+    "author": "<string>"
+}
+```
+
+content: message contents; maximum 2048 characters
+
+channel: channel name to send the message to
+
+author: username of the user who sent this message
+TODO: Remove requirement for "author" when sending
+
+Sent by client: Posts a message in a specific channel.
+
+Sent by server: Notifies about a sent message in a specific channel.
