@@ -112,6 +112,35 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 		} else {
 			send(&MessageFail{Message: "no permissions"})
 		}
+	case *MessageChannelTopic:
+		cn, ct := message.(*MessageChannelTopic).Name, message.(*MessageChannelTopic).Topic
+		mct := &MessageChannelTopic{Name: cn, Topic: ct}
+		owner, err := mel.Database.IsUserOwner(connInfo.username)
+		if err != nil {
+			send(&MessageFail{Message: "sorry, an internal database error has occured"})
+			log.WithFields(log.Fields{
+				"addr": connInfo.connection.RemoteAddr().String(),
+				"name": connInfo.username,
+				"err":  err,
+			}).Error("error when checking if user is an owner")
+		} else if owner {
+			err = mel.Database.SetChannelTopic(cn, ct)
+			if err != nil {
+				send(&MessageFail{Message: "sorry, an internal database error has occured"})
+				log.WithFields(log.Fields{
+					"addr": connInfo.connection.RemoteAddr().String(),
+					"name": connInfo.username,
+					"err":  err,
+				}).Error("error when changing channel topic")
+			} else {
+				send(&MessageOk{Message: "changed channel topic successfully"})
+				mel.IterateOverAllConnections(func(connInfo *ConnInfo) {
+					connInfo.messageStream <- mct
+				})
+			}
+		} else {
+			send(&MessageFail{Message: "no permissions"})
+		}
 	case *MessageDeleteChannel:
 		cn := message.(*MessageDeleteChannel).Name
 		dc := &MessageDeleteChannel{Name: cn}

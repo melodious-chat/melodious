@@ -222,6 +222,26 @@ func (m *MessageDeleteChannel) GetData() *MessageData {
 	return m.md
 }
 
+// MessageChannelTopic - creates a new channel
+type MessageChannelTopic struct {
+	md    *MessageData
+	Name  string
+	Topic string
+}
+
+// GetType - MessageChannelTopic.
+func (m *MessageChannelTopic) GetType() string {
+	return "channel-topic"
+}
+
+// GetData - gets MessageData.
+func (m *MessageChannelTopic) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	var msg BaseMessage
@@ -281,6 +301,14 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 			return nil, errors.New("no name field in new-channel message")
 		}
 		msg = &MessageDeleteChannel{Name: iface["name"].(string)}
+	case "channel-topic":
+		if _, ok := iface["name"]; !ok {
+			return nil, errors.New("no name field in channel-topic message")
+		}
+		if _, ok := iface["topic"]; !ok {
+			return nil, errors.New("no topic field in channel-topic message")
+		}
+		msg = &MessageChannelTopic{Name: iface["name"].(string), Topic: iface["topic"].(string)}
 	}
 
 	if msg != nil {
@@ -320,6 +348,8 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		out = map[string]interface{}{"type": "new-channel", "name": msg.(*MessageNewChannel).Name, "topic": msg.(*MessageNewChannel).Topic}
 	case *MessageDeleteChannel:
 		out = map[string]interface{}{"type": "delete-channel", "name": msg.(*MessageDeleteChannel).Name}
+	case *MessageChannelTopic:
+		out = map[string]interface{}{"type": "channel-topic", "name": msg.(*MessageChannelTopic).Name, "topic": msg.(*MessageChannelTopic).Topic}
 	default:
 		return nil, errors.New("invalid type")
 	}

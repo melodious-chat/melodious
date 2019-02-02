@@ -84,7 +84,7 @@ func (mel *Melodious) IterateOverConnections(username string, f func(connInfo *C
 	} else if m := m.(*sync.Map); m != nil {
 		m.Range(func(key interface{}, value interface{}) bool {
 			if connInfo := key.(*ConnInfo); connInfo != nil {
-				f(connInfo)
+				go f(connInfo)
 			}
 			return true
 		})
@@ -97,7 +97,7 @@ func (mel *Melodious) IterateOverAllConnections(f func(connInfo *ConnInfo)) {
 		if m := m.(*sync.Map); m != nil {
 			m.Range(func(key interface{}, value interface{}) bool {
 				if connInfo := key.(*ConnInfo); connInfo != nil {
-					f(connInfo)
+					go f(connInfo)
 				}
 				return true
 			})
