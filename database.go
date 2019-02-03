@@ -328,6 +328,23 @@ func (db *Database) PostMessageChanID(chanID int, message string, pings []string
 	return nil
 }
 
+// SetFlag - sets a flag. Returns a flag id
+/*
+func (db *Database) SetFlag(flag Flag) (int, error) {
+
+	data, err := json.Marshal(flag.Flag)
+	if err != nil {
+		return -1, err
+	}
+
+	row = db.db.QueryRow(`
+
+	`, flag.Group, flag.Name)
+
+	return 0, nil
+}
+*/
+
 // NewDatabase - creates a new Database instance
 func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	db, err := sql.Open("postgres", addr)
@@ -391,7 +408,7 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 			group_id int4 NOT NULL REFERENCES melodious.groups(id) ON DELETE CASCADE,
 			user_id int4 REFERENCES melodious.accounts(id) ON DELETE CASCADE,
 			channel_id int4 REFERENCES melodious.channels(id) ON DELETE CASCADE,
-			UNIQUE(group_id, user_id)
+			UNIQUE(group_id, user_id, channel_id)
 		);`)
 	if err != nil {
 		return nil, err
@@ -401,14 +418,41 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS melodious.group_flags (
 			id serial NOT NULL PRIMARY KEY,
-			group_id int4 REFERENCES melodious.groups(id) ON DELETE CASCADE,
+			group_id int4 NOT NULL REFERENCES melodious.groups(id) ON DELETE CASCADE,
 			name varchar(32) NOT NULL,
-			flag json NOT NULL
+			flag json NOT NULL,
+			UNIQUE(group_id, name)
 		);`)
 	if err != nil {
 		return nil, err
 	}
 	log.Info("DB: check/create group_flags table")
+
+	_, err = db.Exec(`
+		CREATE OR REPLACE FUNCTION melodious.set_flag(group_name varchar(32), flag_name varchar(32), flag_data json)
+		RETURNS int4
+		LANGUAGE plpgsql
+		AS $$
+		DECLARE
+			fid int4 := NULL;
+			gid int4 := NULL;
+		BEGIN
+			SELECT id INTO gid FROM melodious.groups WHERE name=group_name;
+			SELECT id INTO fid FROM melodious.group_flags WHERE group_id=gid AND name=flag_name;
+			IF fid IS NULL THEN
+				INSERT INTO melodious.group_flags (group_id, name, flag) VALUES (gid, flag_name, flag_data) RETURNING id INTO fid;
+				RETURN fid;
+			ELSE
+				UPDATE melodious.group_flags SET flag=flag_data WHERE id=fid;
+				RETURN fid;
+			END IF;
+		END;
+		$$;
+	`)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("DB: check/create set_flag function")
 
 	dbi := &Database{
 		mel: mel,
