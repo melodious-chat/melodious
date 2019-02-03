@@ -368,7 +368,7 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 			message varchar(2048) NOT NULL,
 			dt timestamp with time zone NOT NULL,
 			pings varchar(32) [],
-			author varchar(64)
+			author varchar(32)
 		);`)
 	if err != nil {
 		return nil, err
