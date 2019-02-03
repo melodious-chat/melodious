@@ -265,10 +265,11 @@ func (m *MessageSubscribe) GetData() *MessageData {
 
 // MessagePostMsg - sends a message to a channel
 type MessagePostMsg struct {
-	md      *MessageData
-	Content string
-	Channel string
-	Author  string
+	md        *MessageData
+	Content   string
+	Channel   string
+	Author    string
+	HasAuthor bool
 }
 
 // GetType - MessagePostMsg.
@@ -366,10 +367,13 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 		if _, ok := iface["channel"]; !ok {
 			return nil, errors.New("no channel field in send-message message")
 		}
-		if _, ok := iface["author"]; !ok {
-			return nil, errors.New("no author field in post-message message")
+		author := ""
+		hasAuthor := false
+		if _, ok := iface["author"]; ok {
+			author = iface["author"].(string)
+			hasAuthor = true
 		}
-		msg = &MessagePostMsg{Content: iface["content"].(string), Channel: iface["channel"].(string), Author: iface["author"].(string)}
+		msg = &MessagePostMsg{Content: iface["content"].(string), Channel: iface["channel"].(string), Author: author, HasAuthor: hasAuthor}
 	}
 
 	if msg != nil {
@@ -414,7 +418,11 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 	case *MessageSubscribe:
 		out = map[string]interface{}{"type": "subscribe", "name": msg.(*MessageSubscribe).Name, "subbed": msg.(*MessageSubscribe).Subbed}
 	case *MessagePostMsg:
-		out = map[string]interface{}{"type": "post-message", "content": msg.(*MessagePostMsg).Content, "channel": msg.(*MessagePostMsg).Channel, "author": msg.(*MessagePostMsg).Author}
+		if msg.(*MessagePostMsg).HasAuthor {
+			out = map[string]interface{}{"type": "post-message", "content": msg.(*MessagePostMsg).Content, "channel": msg.(*MessagePostMsg).Channel, "author": msg.(*MessagePostMsg).Author}
+		} else {
+			out = map[string]interface{}{"type": "post-message", "content": msg.(*MessagePostMsg).Content, "channel": msg.(*MessagePostMsg).Channel}
+		}
 	default:
 		return nil, errors.New("invalid type")
 	}
