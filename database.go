@@ -294,13 +294,13 @@ func (db *Database) DeleteOldMessages(period string) error {
 func (db *Database) PostMessage(chanName string, message string, pings []string, author string) error {
 	_, err := db.db.Exec(`
 		INSERT INTO melodious.messages
-		(chan_id, message, dt, pings, author)
+		(chan_id, message, dt, pings, author_id)
 		VALUES (
 			(SELECT id FROM melodious.channels WHERE name=$1 LIMIT 1),
 			$2,
 			NOW(),
 			$3,
-			$4
+			(SELECT id FROM melodious.accounts WHERE username=$4 LIMIT 1)
 		);
 	`, chanName, message, pq.Array(pings), author)
 	if err != nil {
@@ -319,9 +319,9 @@ func (db *Database) PostMessageChanID(chanID int, message string, pings []string
 			$2,
 			NOW(),
 			$3,
-			$4
+			(SELECT id FROM melodious.accounts WHERE username=$4 LIMIT 1)
 		);
-	`, chanID, message, pings, author)
+	`, chanID, message, pq.Array(pings), author)
 	if err != nil {
 		return err
 	}
@@ -365,10 +365,10 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 		CREATE TABLE IF NOT EXISTS melodious.messages (
 			id serial NOT NULL PRIMARY KEY,
 			chan_id int4 NOT NULL REFERENCES melodious.channels(id) ON DELETE CASCADE,
+			author_id int4 NOT NULL REFERENCES melodious.accounts(id) ON DELETE CASCADE,
 			message varchar(2048) NOT NULL,
 			dt timestamp with time zone NOT NULL,
-			pings varchar(32) [],
-			author varchar(32)
+			pings varchar(32) []
 		);`)
 	if err != nil {
 		return nil, err
