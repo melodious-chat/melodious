@@ -7,3 +7,11 @@ type Flag struct {
 	Flag     map[string]interface{}
 	Priority int
 }
+
+// GroupHolder - Describes a group holder in the database
+type GroupHolder struct {
+	Group string
+
+	User    string
+	Channel string
+}

@@ -68,12 +68,12 @@ These messages are used to notify user about results of operations started by th
 {
     "type": "register",
     "name": "<string>",
-    "pass": "<sha256>"
+    "pass": "<string>"
 }
 ```
 
 name: Username. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
-hash: SHA256 hash sum of the password. MUST match `[a-f0-9]{64}` regex
+pass: Password. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
 
 If user with username `name` already exists, server MUST send a `fatal` message.
 
@@ -91,12 +91,12 @@ After registering user MUST be treated as logged in.
 {
     "type": "login",
     "name": "<string>",
-    "pass": "<sha256>"
+    "pass": "<string>"
 }
 ```
 
 name: Username. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
-hash: SHA256 hash sum of the password. MUST match `[a-f0-9]{32-64}` regex
+pass: Password. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
 
 If user with username `name` does not exist or SHA256 hash/checksum `hash` is invalid, server MUST send a `fatal` message.
 

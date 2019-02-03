@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -328,22 +329,82 @@ func (db *Database) PostMessageChanID(chanID int, message string, pings []string
 	return nil
 }
 
-// SetFlag - sets a flag. Returns a flag id
-/*
-func (db *Database) SetFlag(flag Flag) (int, error) {
+// AddGroup - adds a group
+func (db *Database) AddGroup(name string) (int, error) {
+	row := db.db.QueryRow(`
+		INSERT INTO melodious.groups (name)	VALUES ($1) RETURNING id;
+	`, name)
+	var id int
+	err := row.Scan(&id)
+	if err != nil {
+		return -1, err
+	}
+	return id, nil
+}
 
+// DeleteGroup - deletes a group
+func (db *Database) DeleteGroup(name string) error {
+	_, err := db.db.Exec(`
+		DELETE FROM melodious.groups WHERE name=$1;
+	`, name)
+	return err
+}
+
+// SetFlag - sets a flag. Returns a flag id
+func (db *Database) SetFlag(flag Flag) (int, error) {
 	data, err := json.Marshal(flag.Flag)
 	if err != nil {
 		return -1, err
 	}
 
-	row = db.db.QueryRow(`
+	row := db.db.QueryRow(`
+		SELECT melodious.set_flag($1, $2, $3::JSON);
+	`, flag.Group, flag.Name, string(data))
+	var id int
+	err = row.Scan(&id)
+	if err != nil {
+		return -1, err
+	}
 
-	`, flag.Group, flag.Name)
-
-	return 0, nil
+	return id, nil
 }
-*/
+
+// DeleteFlag - deletes a flag.
+func (db *Database) DeleteFlag(flag Flag) error {
+	_, err := db.db.Exec(`
+		CALL melodious.delete_flag($1, $2);
+	`)
+	return err
+}
+
+// AddGroupHolder - adds a group holder
+func (db *Database) AddGroupHolder(gh GroupHolder) (int, error) {
+	row := db.db.QueryRow(`
+		SELECT melodious.insert_group_holder($1, $2, $3);
+	`, gh.Group, gh.User, gh.Channel)
+	var id int
+	err := row.Scan(&id)
+	if err != nil {
+		return -1, err
+	}
+	return id, nil
+}
+
+// DeleteGroupHolder - deletes a group holder
+func (db *Database) DeleteGroupHolder(id int) error {
+	_, err := db.db.Exec(`
+		DELETE FROM melodious.group_holders WHERE id=$1;
+	`, id)
+	return err
+}
+
+// DeleteGroupHolders - deletes group holders by template. Use empty strings where you usually would use a *
+func (db *Database) DeleteGroupHolders(gh GroupHolder) error {
+	_, err := db.db.Exec(`
+		CALL melodious.delete_group_holders($1, $2, $3);
+	`, gh.Group, gh.User, gh.Channel)
+	return err
+}
 
 // NewDatabase - creates a new Database instance
 func NewDatabase(mel *Melodious, addr string) (*Database, error) {
@@ -453,6 +514,115 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 		return nil, err
 	}
 	log.Info("DB: check/create set_flag function")
+
+	_, err = db.Exec(`
+		CREATE OR REPLACE PROCEDURE melodious.delete_flag(group_name varchar(32), flag_name varchar(32))
+		LANGUAGE plpgsql
+		AS $$
+		DECLARE
+			gid int4 := NULL;
+		BEGIN
+			SELECT id INTO gid FROM melodious.groups WHERE name=group_name;
+			IF gid IS NOT NULL THEN
+				DELETE FROM melodious.group_flags WHERE group_id=gid AND name=flag_name;
+			END IF;
+		END;
+		$$;
+	`)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("DB: check/create delete_flag procedure")
+
+	_, err = db.Exec(`
+		CREATE OR REPLACE FUNCTION melodious.insert_group_holder(group_name varchar(32), user_name varchar(32), chan_name varchar(32))
+		RETURNS int4
+		LANGUAGE plpgsql
+		AS $$
+		DECLARE
+			gid  int4 := NULL;
+			uid  int4 := NULL;
+			cid  int4 := NULL;
+			ghid int4 := NULL;
+		BEGIN
+			SELECT id INTO gid FROM melodious.groups WHERE name=group_name;
+			IF gid IS NULL THEN
+				RAISE EXCEPTION 'no such group';
+			END IF;
+			IF user_name IS NOT NULL THEN
+				SELECT id INTO uid FROM melodious.accounts WHERE username=user_name;
+				IF uid IS NULL THEN
+					RAISE EXCEPTION 'no such user';
+				END IF;
+			END IF;
+			IF chan_name IS NOT NULL THEN
+				SELECT id INTO cid FROM melodious.channels WHERE name=chan_name;
+				IF cid IS NULL THEN
+					RAISE EXCEPTION 'no such channel';
+				END IF;
+			END IF;
+			INSERT INTO melodious.group_holders (group_id, user_id, channel_id) VALUES (gid, uid, cid) RETURNING id INTO ghid;
+			RETURN ghid;
+		END;
+		$$;
+	`)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("DB: check/create insert_group_holder function")
+
+	_, err = db.Exec(`
+		CREATE OR REPLACE PROCEDURE melodious.delete_group_holders(group_name varchar(32), user_name varchar(32), chan_name varchar(32))
+		LANGUAGE plpgsql
+		AS $$
+		DECLARE
+			gid int4 := NULL;
+			uid int4 := NULL;
+			cid int4 := NULL;
+		BEGIN
+			IF group_name <> '' THEN
+				SELECT id INTO gid FROM melodious.groups WHERE name=group_name;
+				IF gid IS NULL THEN
+					RAISE EXCEPTION 'no such group';
+				END IF;
+			END IF;
+			IF user_name <> '' THEN
+				SELECT id INTO uid FROM melodious.accounts WHERE username=user_name;
+				IF uid IS NULL THEN
+					RAISE EXCEPTION 'no such user';
+				END IF;
+			END IF;
+			IF chan_name <> '' THEN
+				SELECT id INTO cid FROM melodious.channels WHERE name=chan_name;
+				IF cid IS NULL THEN
+					RAISE EXCEPTION 'no such channel';
+				END IF;
+			END IF;
+			
+			IF group_name IS NOT NULL AND user_name IS NULL AND chan_name IS NULL THEN
+				DELETE FROM melodious.group_holders WHERE group_id=gid;
+			ELSIF group_name IS NOT NULL AND user_name IS NOT NULL AND chan_name IS NULL THEN
+				DELETE FROM melodious.group_holders WHERE group_id=gid AND user_id=uid;
+			ELSIF group_name IS NOT NULL AND user_name IS NULL AND chan_name IS NOT NULL THEN
+				DELETE FROM melodious.group_holders WHERE group_id=gid AND channel_id=cid;
+			ELSIF group_name IS NOT NULL AND user_name IS NOT NULL AND chan_name IS NOT NULL THEN
+				DELETE FROM melodious.group_holders WHERE group_id=gid AND user_id=uid AND channel_id=cid;
+			ELSIF group_name IS NULL AND user_name IS NULL AND chan_name IS NULL THEN
+				RAISE EXCEPTION 'cannot delete all group holders in a single request';
+			ELSIF group_name IS NULL AND user_name IS NOT NULL AND chan_name IS NULL THEN
+				DELETE FROM melodious.group_holders WHERE user_id=uid;
+			ELSIF group_name IS NULL AND user_name IS NULL AND chan_name IS NOT NULL THEN
+				DELETE FROM melodious.group_holders WHERE channel_id=cid;
+			ELSIF group_name IS NULL AND user_name IS NOT NULL AND chan_name IS NOT NULL THEN
+				DELETE FROM melodious.group_holders WHERE user_id=uid AND channel_id=cid;
+			END IF;
+		END;
+		$$;
+	`)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("DB: check/create delete_group_holders function")
 
 	dbi := &Database{
 		mel: mel,
