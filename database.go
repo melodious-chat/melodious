@@ -406,6 +406,14 @@ func (db *Database) DeleteGroupHolders(gh GroupHolder) error {
 	return err
 }
 
+// QueryFlags - queries flags using given pattern. Use empty strings where you usually would use a *
+func (db *Database) QueryFlags(user string, channel string) error {
+	_, err := db.db.Exec(`
+		SELECT melodious.query_flags($1, $2);
+	`, user, channel)
+	return err
+}
+
 // NewDatabase - creates a new Database instance
 func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	db, err := sql.Open("postgres", addr)
@@ -481,7 +489,7 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 			id serial NOT NULL PRIMARY KEY,
 			group_id int4 NOT NULL REFERENCES melodious.groups(id) ON DELETE CASCADE,
 			name varchar(32) NOT NULL,
-			flag json NOT NULL,
+			flag jsonb NOT NULL,
 			UNIQUE(group_id, name)
 		);`)
 	if err != nil {
@@ -490,7 +498,7 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	log.Info("DB: check/create group_flags table")
 
 	_, err = db.Exec(`
-		CREATE OR REPLACE FUNCTION melodious.set_flag(group_name varchar(32), flag_name varchar(32), flag_data json)
+		CREATE OR REPLACE FUNCTION melodious.set_flag(group_name varchar(32), flag_name varchar(32), flag_data jsonb)
 		RETURNS int4
 		LANGUAGE plpgsql
 		AS $$
@@ -599,21 +607,21 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 				END IF;
 			END IF;
 			
-			IF group_name IS NOT NULL AND user_name IS NULL AND chan_name IS NULL THEN
+			IF group_name = '' AND user_name = '' AND chan_name = '' THEN
 				DELETE FROM melodious.group_holders WHERE group_id=gid;
-			ELSIF group_name IS NOT NULL AND user_name IS NOT NULL AND chan_name IS NULL THEN
+			ELSIF group_name <> '' AND user_name <> '' AND chan_name = '' THEN
 				DELETE FROM melodious.group_holders WHERE group_id=gid AND user_id=uid;
-			ELSIF group_name IS NOT NULL AND user_name IS NULL AND chan_name IS NOT NULL THEN
+			ELSIF group_name <> '' AND user_name = '' AND chan_name <> '' THEN
 				DELETE FROM melodious.group_holders WHERE group_id=gid AND channel_id=cid;
-			ELSIF group_name IS NOT NULL AND user_name IS NOT NULL AND chan_name IS NOT NULL THEN
+			ELSIF group_name <> '' AND user_name <> '' AND chan_name <> '' THEN
 				DELETE FROM melodious.group_holders WHERE group_id=gid AND user_id=uid AND channel_id=cid;
-			ELSIF group_name IS NULL AND user_name IS NULL AND chan_name IS NULL THEN
+			ELSIF group_name = '' AND user_name = '' AND chan_name = '' THEN
 				RAISE EXCEPTION 'cannot delete all group holders in a single request';
-			ELSIF group_name IS NULL AND user_name IS NOT NULL AND chan_name IS NULL THEN
+			ELSIF group_name = '' AND user_name <> '' AND chan_name = '' THEN
 				DELETE FROM melodious.group_holders WHERE user_id=uid;
-			ELSIF group_name IS NULL AND user_name IS NULL AND chan_name IS NOT NULL THEN
+			ELSIF group_name = '' AND user_name = '' AND chan_name <> '' THEN
 				DELETE FROM melodious.group_holders WHERE channel_id=cid;
-			ELSIF group_name IS NULL AND user_name IS NOT NULL AND chan_name IS NOT NULL THEN
+			ELSIF group_name = '' AND user_name <> '' AND chan_name <> '' THEN
 				DELETE FROM melodious.group_holders WHERE user_id=uid AND channel_id=cid;
 			END IF;
 		END;
@@ -623,6 +631,238 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 		return nil, err
 	}
 	log.Info("DB: check/create delete_group_holders function")
+
+	_, err = db.Exec(`
+		CREATE OR REPLACE FUNCTION melodious.query_flags(user_name varchar(32), chan_name varchar(32), igroup_name varchar(32), iflag_name varchar(32))
+		RETURNS TABLE (
+			group_holders jsonb [],
+			flag_id int4,
+			flag_name varchar(32),
+			flag jsonb
+		)
+		LANGUAGE plpgsql
+		AS $$
+		DECLARE
+			uid int4 := NULL;
+			cid int4 := NULL;
+			gid int4 := NULL;
+		BEGIN
+			IF user_name <> '' THEN
+				SELECT id INTO uid FROM melodious.accounts WHERE username=user_name;
+				IF uid IS NULL THEN
+					RAISE EXCEPTION 'no such user';
+				END IF;
+			END IF;
+			IF chan_name <> '' THEN
+				SELECT id INTO cid FROM melodious.channels WHERE name=chan_name;
+				IF cid IS NULL THEN
+					RAISE EXCEPTION 'no such channel';
+				END IF;
+			END IF;
+			IF igroup_name <> '' THEN
+				SELECT id INTO gid FROM melodious.groups WHERE name=igroup_name;
+				IF gid IS NULL THEN
+					RAISE EXCEPTION 'go such group';
+				END IF;
+			END IF;
+
+			IF igroup_name = '' THEN
+				IF iflag_name = '' THEN
+					IF user_name = '' AND chan_name = '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB((SELECT name FROM melodious.groups WHERE id=gh.group_id LIMIT 1)))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						GROUP BY gf.id, gf.name;
+					ELSIF user_name <> '' AND chan_name <> '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB((SELECT name FROM melodious.groups WHERE id=gh.group_id LIMIT 1)))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						WHERE gh.user_id = uid AND gh.channel_id = cid
+						GROUP BY gf.id, gf.name;
+					ELSIF user_name <> '' AND chan_name = '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB((SELECT name FROM melodious.groups WHERE id=gh.group_id LIMIT 1)))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						WHERE gh.user_id = uid
+						GROUP BY gf.id, gf.name;
+					ELSIF user_name = '' AND chan_name <> '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB((SELECT name FROM melodious.groups WHERE id=gh.group_id LIMIT 1)))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						WHERE gh.channel_id = cid
+						GROUP BY gf.id, gf.name;
+					END IF;
+				ELSE
+					IF user_name = '' AND chan_name = '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB((SELECT name FROM melodious.groups WHERE id=gh.group_id LIMIT 1)))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						WHERE gf.name = iflag_name
+						GROUP BY gf.id, gf.name;
+					ELSIF user_name <> '' AND chan_name <> '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB((SELECT name FROM melodious.groups WHERE id=gh.group_id LIMIT 1)))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						WHERE gh.user_id = uid AND gh.channel_id = cid AND gf.name = iflag_name
+						GROUP BY gf.id, gf.name;
+					ELSIF user_name <> '' AND chan_name = '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB((SELECT name FROM melodious.groups WHERE id=gh.group_id LIMIT 1)))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						WHERE gh.user_id = uid AND gf.name = iflag_name
+						GROUP BY gf.id, gf.name;
+					ELSIF user_name = '' AND chan_name <> '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB((SELECT name FROM melodious.groups WHERE id=gh.group_id LIMIT 1)))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						WHERE gh.channel_id = cid AND gf.name = iflag_name
+						GROUP BY gf.id, gf.name;
+					END IF;
+				END IF;
+			ELSE
+				IF iflag_name = '' THEN
+					IF user_name = '' AND chan_name = '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB(igroup_name))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						WHERE gh.group_id = gid
+						GROUP BY gf.id, gf.name;
+					ELSIF user_name <> '' AND chan_name <> '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB(igroup_name))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						WHERE gh.user_id = uid AND gh.channel_id = cid AND gh.group_id = gid
+						GROUP BY gf.id, gf.name;
+					ELSIF user_name <> '' AND chan_name = '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB(igroup_name))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						WHERE gh.user_id = uid AND gh.group_id = gid
+						GROUP BY gf.id, gf.name;
+					ELSIF user_name = '' AND chan_name <> '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB(igroup_name))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						WHERE gh.channel_id = cid AND gh.group_id = gid
+						GROUP BY gf.id, gf.name;
+					END IF;
+				ELSE
+					IF user_name = '' AND chan_name = '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB(igroup_name))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						INNER JOIN melodious.groups g
+						ON g.id = gh.group_id
+						WHERE gf.name = iflag_name AND gh.group_id = gid
+						GROUP BY gf.id, gf.name;
+					ELSIF user_name <> '' AND chan_name <> '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB(igroup_name))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						WHERE gh.user_id = uid AND gh.channel_id = cid AND gf.name = iflag_name AND gh.group_id = gid
+						GROUP BY gf.id, gf.name;
+					ELSIF user_name <> '' AND chan_name = '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB(igroup_name))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						WHERE gh.user_id = uid AND gf.name = iflag_name AND gh.group_id = gid
+						GROUP BY gf.id, gf.name;
+					ELSIF user_name = '' AND chan_name <> '' THEN
+						RETURN QUERY SELECT
+							ARRAY_AGG(JSONB_SET(ROW_TO_JSON(gh)::JSONB, '{group_name}'::TEXT[], TO_JSONB(igroup_name))) AS group_holders,
+							gf.id flag_id,
+							gf.name flag_name,
+							gf.flag flag
+						FROM melodious.group_holders gh
+						INNER JOIN melodious.group_flags gf
+						ON gh.group_id = gf.group_id
+						WHERE gh.channel_id = cid AND gf.name = iflag_name AND gh.group_id = gid
+						GROUP BY gf.id, gf.name;
+					END IF;
+				END IF;
+			END IF;
+		END;
+		$$;
+	`)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("DB: check/create query_flag function")
 
 	dbi := &Database{
 		mel: mel,
