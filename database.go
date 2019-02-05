@@ -407,42 +407,44 @@ func (db *Database) DeleteGroupHolders(gh GroupHolder) error {
 }
 
 // QueryFlags - queries flags using given pattern. Use empty strings where you usually would use a *
-func (db *Database) QueryFlags(user string, channel string, group string, flag string) error {
-	/*
-		rows, err := db.db.Exec(`
-			SELECT group_holders, flag_id, flag_name, flag FROM melodious.query_flags($1, $2, $3, $4);
-		`, user, channel, group, flag)
+func (db *Database) QueryFlags(user string, channel string, group string, flag string, checkflags bool) ([]*FlagQueryResult, error) {
+	rows, err := db.db.Query(`
+		SELECT group_holders, flag_id, flag_name, flag FROM melodious.query_flags($1, $2, $3, $4, $5);
+	`, user, channel, group, flag, checkflags)
+	if err != nil {
+		return nil, err
+	}
 
+	var s []*FlagQueryResult
+
+	for rows.Next() {
 		var sa pq.StringArray
 		var fid int
 		var fn string
 		var fs string
-	*/
-
-	/*
-		rows, err := db.db.Query(`
-			SELECT name, id FROM melodious.channels;
-		`)
+		if err := rows.Scan(&sa, &fid, &fn, &fs); err != nil {
+			return nil, err
+		}
+		fqr := &FlagQueryResult{}
+		fqr.GroupHolders = []*GroupHolderFQResult{}
+		fqr.FlagID = fid
+		fqr.FlagName = fn
+		err = json.Unmarshal([]byte(fs), &(fqr.Flag))
 		if err != nil {
 			return nil, err
 		}
-		defer rows.Close()
-
-		var m map[string]int
-
-		for rows.Next() {
-			var name string
-			var id int
-			if err := rows.Scan(&name, &id); err != nil {
+		for _, gh := range sa {
+			r := &GroupHolderFQResult{}
+			err := json.Unmarshal([]byte(gh), r)
+			if err != nil {
 				return nil, err
 			}
-			m[name] = id
+			fqr.GroupHolders = append(fqr.GroupHolders, r)
 		}
+		s = append(s, fqr)
+	}
 
-		return m, nil
-	*/
-
-	return nil
+	return s, nil
 }
 
 // NewDatabase - creates a new Database instance
