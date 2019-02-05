@@ -169,8 +169,7 @@ content: message contents; maximum 2048 characters
 channel: channel name to send the message to
 
 author: username of the user who sent this message
-TODO: Remove requirement for "author" when sending
 
-Sent by client: Posts a message in a specific channel.
+Sent by client: Posts a message in a specific channel (the "author" field does not need to be sent).
 
 Sent by server: Notifies about a sent message in a specific channel.

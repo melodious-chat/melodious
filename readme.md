@@ -51,5 +51,6 @@ An example config file:
 ## Current To-Do list
 
 * Implement a working prototype
-  * Allow uploading and receiving images
+  * Fully implement flags
+  * Implement flag-based permissions
 * Add a REST API for those who cannot use websockets
