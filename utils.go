@@ -34,3 +34,11 @@ type FlagQueryResult struct {
 	FlagName     string
 	Flag         map[string]interface{}
 }
+
+// ChatMessage - a message received from message history
+type ChatMessage struct {
+	Message   string   `json:"content"`
+	Pings     []string `json:"pings"`
+	ID        int      `json:"id"`
+	Timestamp string   `json:"timestamp"`
+}
