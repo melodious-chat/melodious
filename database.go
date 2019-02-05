@@ -406,7 +406,10 @@ func (db *Database) DeleteGroupHolders(gh GroupHolder) error {
 	return err
 }
 
-// QueryFlags - queries flags using given pattern. Use empty strings where you usually would use a *
+// QueryFlags -
+// When checkflags:
+//   true - queries if theres a flag available to the given channel/user/user-on-channel
+//   false - queries flags using given pattern. Use empty strings where you usually would use a *
 func (db *Database) QueryFlags(user string, channel string, group string, flag string, checkflags bool) ([]*FlagQueryResult, error) {
 	rows, err := db.db.Query(`
 		SELECT group_holders, flag_id, flag_name, flag FROM melodious.query_flags($1, $2, $3, $4, $5);
