@@ -407,11 +407,42 @@ func (db *Database) DeleteGroupHolders(gh GroupHolder) error {
 }
 
 // QueryFlags - queries flags using given pattern. Use empty strings where you usually would use a *
-func (db *Database) QueryFlags(user string, channel string) error {
-	_, err := db.db.Exec(`
-		SELECT melodious.query_flags($1, $2);
-	`, user, channel)
-	return err
+func (db *Database) QueryFlags(user string, channel string, group string, flag string) error {
+	/*
+		rows, err := db.db.Exec(`
+			SELECT group_holders, flag_id, flag_name, flag FROM melodious.query_flags($1, $2, $3, $4);
+		`, user, channel, group, flag)
+
+		var sa pq.StringArray
+		var fid int
+		var fn string
+		var fs string
+	*/
+
+	/*
+		rows, err := db.db.Query(`
+			SELECT name, id FROM melodious.channels;
+		`)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var m map[string]int
+
+		for rows.Next() {
+			var name string
+			var id int
+			if err := rows.Scan(&name, &id); err != nil {
+				return nil, err
+			}
+			m[name] = id
+		}
+
+		return m, nil
+	*/
+
+	return nil
 }
 
 // NewDatabase - creates a new Database instance
@@ -633,7 +664,7 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	log.Info("DB: check/create delete_group_holders function")
 
 	_, err = db.Exec(`
-		CREATE OR REPLACE FUNCTION melodious.query_flags(user_name varchar(32), chan_name varchar(32), igroup_name varchar(32), iflag_name varchar(32))
+		CREATE OR REPLACE FUNCTION melodious.query_flags(user_name varchar(32), chan_name varchar(32), igroup_name varchar(32), iflag_name varchar(32), flagcheck bool)
 		RETURNS TABLE (
 			group_holders jsonb [],
 			flag_id int4,
@@ -677,6 +708,7 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						FROM melodious.group_holders gh
 						INNER JOIN melodious.group_flags gf
 						ON gh.group_id = gf.group_id
+						WHERE (NOT flagcheck) OR (flagcheck AND gh.user_id IS NULL AND gh.channel_id IS NULL)
 						GROUP BY gf.id, gf.name;
 					ELSIF user_name <> '' AND chan_name <> '' THEN
 						RETURN QUERY SELECT
@@ -687,7 +719,10 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						FROM melodious.group_holders gh
 						INNER JOIN melodious.group_flags gf
 						ON gh.group_id = gf.group_id
-						WHERE gh.user_id = uid AND gh.channel_id = cid
+						WHERE (gh.user_id = uid AND gh.channel_id = cid)
+							 OR (flagcheck AND gh.user_id = uid AND gh.channel_id IS NULL)
+							 OR (flagcheck AND gh.user_id IS NULL AND gh.channel_id = cid)
+							 OR (flagcheck AND gh.user_id IS NULL AND gh.channel_id IS NULL)
 						GROUP BY gf.id, gf.name;
 					ELSIF user_name <> '' AND chan_name = '' THEN
 						RETURN QUERY SELECT
@@ -698,7 +733,9 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						FROM melodious.group_holders gh
 						INNER JOIN melodious.group_flags gf
 						ON gh.group_id = gf.group_id
-						WHERE gh.user_id = uid
+						WHERE (NOT flagcheck AND gh.user_id = uid)
+							 OR (flagcheck AND gh.user_id = uid AND gh.channel_id IS NULL)
+							 OR (flagcheck AND gh.user_id IS NULL AND gh.channel_id IS NULL)
 						GROUP BY gf.id, gf.name;
 					ELSIF user_name = '' AND chan_name <> '' THEN
 						RETURN QUERY SELECT
@@ -709,7 +746,9 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						FROM melodious.group_holders gh
 						INNER JOIN melodious.group_flags gf
 						ON gh.group_id = gf.group_id
-						WHERE gh.channel_id = cid
+						WHERE (NOT flagcheck AND gh.channel_id = cid)
+							 OR (flagcheck AND gh.user_id IS NULL AND gh.channel_id = cid)
+							 OR (flagcheck AND gh.user_id IS NULL AND gh.channel_id IS NULL)
 						GROUP BY gf.id, gf.name;
 					END IF;
 				ELSE
@@ -722,7 +761,11 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						FROM melodious.group_holders gh
 						INNER JOIN melodious.group_flags gf
 						ON gh.group_id = gf.group_id
-						WHERE gf.name = iflag_name
+						WHERE (gf.name = iflag_name)
+							AND (
+								(NOT flagcheck)
+								OR (flagcheck AND gh.user_id IS NULL AND gh.channel_id IS NULL)
+							)
 						GROUP BY gf.id, gf.name;
 					ELSIF user_name <> '' AND chan_name <> '' THEN
 						RETURN QUERY SELECT
@@ -733,7 +776,13 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						FROM melodious.group_holders gh
 						INNER JOIN melodious.group_flags gf
 						ON gh.group_id = gf.group_id
-						WHERE gh.user_id = uid AND gh.channel_id = cid AND gf.name = iflag_name
+						WHERE gf.name = iflag_name
+						  AND (
+								(gh.user_id = uid AND gh.channel_id = cid)
+							 	OR (flagcheck AND gh.user_id = uid AND gh.channel_id IS NULL)
+								OR (flagcheck AND gh.user_id IS NULL AND gh.channel_id = cid)
+								OR (flagcheck AND gh.user_id IS NULL AND gh.channel_id IS NULL)
+							)
 						GROUP BY gf.id, gf.name;
 					ELSIF user_name <> '' AND chan_name = '' THEN
 						RETURN QUERY SELECT
@@ -744,7 +793,12 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						FROM melodious.group_holders gh
 						INNER JOIN melodious.group_flags gf
 						ON gh.group_id = gf.group_id
-						WHERE gh.user_id = uid AND gf.name = iflag_name
+						WHERE gf.name = iflag_name
+							AND (
+								(NOT flagcheck AND gh.user_id = uid)
+								OR (flagcheck AND gh.user_id = uid AND gh.channel_id IS NULL)
+								OR (flagcheck AND gh.user_id IS NULL AND gh.channel_id IS NULL)
+							)
 						GROUP BY gf.id, gf.name;
 					ELSIF user_name = '' AND chan_name <> '' THEN
 						RETURN QUERY SELECT
@@ -755,7 +809,12 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						FROM melodious.group_holders gh
 						INNER JOIN melodious.group_flags gf
 						ON gh.group_id = gf.group_id
-						WHERE gh.channel_id = cid AND gf.name = iflag_name
+						WHERE gf.name = iflag_name
+							AND (
+								(NOT flagcheck AND gh.channel_id = cid)
+								OR (flagcheck AND gh.channel_id = cid AND gh.user_id IS NULL)
+								OR (flagcheck AND gh.channel_id IS NULL AND gh.user_id IS NULL)
+							)
 						GROUP BY gf.id, gf.name;
 					END IF;
 				END IF;
@@ -771,6 +830,10 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						INNER JOIN melodious.group_flags gf
 						ON gh.group_id = gf.group_id
 						WHERE gh.group_id = gid
+							AND (
+								(NOT flagcheck)
+								OR (flagcheck AND gh.user_id IS NULL AND gh.channel_id IS NULL)
+							)
 						GROUP BY gf.id, gf.name;
 					ELSIF user_name <> '' AND chan_name <> '' THEN
 						RETURN QUERY SELECT
@@ -781,7 +844,13 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						FROM melodious.group_holders gh
 						INNER JOIN melodious.group_flags gf
 						ON gh.group_id = gf.group_id
-						WHERE gh.user_id = uid AND gh.channel_id = cid AND gh.group_id = gid
+						WHERE gh.group_id = gid
+							AND (
+								(gh.channel_id = cid AND gh.user_id = uid)
+								OR (flagcheck AND gh.channel_id = cid AND gh.user_id IS NULL)
+								OR (flagcheck AND gh.channel_id IS NULL AND gh.user_id = uid)
+								OR (flagcheck AND gh.channel_id IS NULL AND gh.user_id IS NULL)
+							)
 						GROUP BY gf.id, gf.name;
 					ELSIF user_name <> '' AND chan_name = '' THEN
 						RETURN QUERY SELECT
@@ -792,7 +861,12 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						FROM melodious.group_holders gh
 						INNER JOIN melodious.group_flags gf
 						ON gh.group_id = gf.group_id
-						WHERE gh.user_id = uid AND gh.group_id = gid
+						WHERE gh.group_id = gid
+							AND (
+								(NOT flagcheck AND gh.user_id = uid)
+								OR (flagcheck AND gh.user_id = uid AND gh.channel_id IS NULL)
+								OR (flagcheck AND gh.user_id IS NULL AND gh.channel_id IS NULL)
+							)
 						GROUP BY gf.id, gf.name;
 					ELSIF user_name = '' AND chan_name <> '' THEN
 						RETURN QUERY SELECT
@@ -803,7 +877,12 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						FROM melodious.group_holders gh
 						INNER JOIN melodious.group_flags gf
 						ON gh.group_id = gf.group_id
-						WHERE gh.channel_id = cid AND gh.group_id = gid
+						WHERE gh.group_id = gid
+							AND (
+								(NOT flagcheck AND gh.channel_id = cid)
+								OR (flagcheck AND gh.channel_id = cid AND gh.user_id IS NULL)
+								OR (flagcheck AND gh.channel_id IS NULL AND gh.user_id IS NULL) 
+							)
 						GROUP BY gf.id, gf.name;
 					END IF;
 				ELSE
@@ -818,7 +897,11 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						ON gh.group_id = gf.group_id
 						INNER JOIN melodious.groups g
 						ON g.id = gh.group_id
-						WHERE gf.name = iflag_name AND gh.group_id = gid
+						WHERE (gf.name = iflag_name AND gh.group_id = gid)
+							AND (
+								(NOT flagcheck)
+								OR (flagcheck AND gh.channel_id IS NULL AND gh.user_id IS NULL)
+							)
 						GROUP BY gf.id, gf.name;
 					ELSIF user_name <> '' AND chan_name <> '' THEN
 						RETURN QUERY SELECT
@@ -829,7 +912,13 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						FROM melodious.group_holders gh
 						INNER JOIN melodious.group_flags gf
 						ON gh.group_id = gf.group_id
-						WHERE gh.user_id = uid AND gh.channel_id = cid AND gf.name = iflag_name AND gh.group_id = gid
+						WHERE (gf.name = iflag_name AND gh.group_id = gid)
+							AND (
+								(gh.user_id = uid AND gh.channel_id = cid)
+								OR (flagcheck AND gh.user_id = uid AND gh.channel_id IS NULL)
+								OR (flagcheck AND gh.user_id IS NULL AND gh.channel_id = cid)
+								OR (flagcheck AND gh.user_id IS NULL AND gh.channel_id IS NULL)
+							)
 						GROUP BY gf.id, gf.name;
 					ELSIF user_name <> '' AND chan_name = '' THEN
 						RETURN QUERY SELECT
@@ -840,7 +929,12 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						FROM melodious.group_holders gh
 						INNER JOIN melodious.group_flags gf
 						ON gh.group_id = gf.group_id
-						WHERE gh.user_id = uid AND gf.name = iflag_name AND gh.group_id = gid
+						WHERE (gh.group_id = gid AND gf.name = iflag_name)
+							AND (
+								(NOT flagcheck AND gh.user_id = uid)
+								OR (flagcheck AND gh.user_id = uid AND gh.channel_id IS NULL)
+								OR (flagcheck AND gh.user_id IS NULL AND gh.channel_id IS NULL)
+							)
 						GROUP BY gf.id, gf.name;
 					ELSIF user_name = '' AND chan_name <> '' THEN
 						RETURN QUERY SELECT
@@ -851,7 +945,12 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 						FROM melodious.group_holders gh
 						INNER JOIN melodious.group_flags gf
 						ON gh.group_id = gf.group_id
-						WHERE gh.channel_id = cid AND gf.name = iflag_name AND gh.group_id = gid
+						WHERE (gf.name = iflag_name AND gh.group_id = gid)
+							AND (
+								(NOT flagcheck AND gh.channel_id = cid)
+								OR (flagcheck AND gh.channel_id = cid AND gh.user_id IS NULL)
+								OR (flagcheck AND gh.channel_id IS NULL AND gh.user_id IS NULL)
+							)
 						GROUP BY gf.id, gf.name;
 					END IF;
 				END IF;
@@ -862,7 +961,27 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Info("DB: check/create query_flag function")
+	log.Info("DB: check/create query_flag(5) function")
+
+	_, err = db.Exec(`
+		CREATE OR REPLACE FUNCTION melodious.query_flags(user_name varchar(32), chan_name varchar(32), igroup_name varchar(32), iflag_name varchar(32))
+		RETURNS TABLE (
+			group_holders jsonb [],
+			flag_id int4,
+			flag_name varchar(32),
+			flag jsonb
+		)
+		LANGUAGE plpgsql
+		AS $$
+		BEGIN
+			RETURN QUERY SELECT melodious.query_flags(user_name, chan_name, igroup_name, iflag_name, false);
+		END;
+		$$;
+	`)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("DB: check/create query_flag(4) function")
 
 	dbi := &Database{
 		mel: mel,

@@ -18,10 +18,19 @@ type GroupHolder struct {
 	Channel string
 }
 
+// GroupHolderFQResult - Describes a group holder received from FlagQueryResult
+type GroupHolderFQResult struct {
+	ID        int
+	UserID    int
+	ChannelID int
+	GroupID   int
+	GroupName string
+}
+
 // FlagQueryResult - Describes result of a flag query
 type FlagQueryResult struct {
-	All         map[*Flag]bool
-	User        map[*Flag]bool
-	Channel     map[*Flag]bool
-	UserChannel map[*Flag]bool
+	GroupHolders []GroupHolderFQResult
+	FlagID       int
+	FlagName     string
+	Flag         map[string]interface{}
 }
