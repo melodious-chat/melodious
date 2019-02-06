@@ -215,6 +215,10 @@ func handlePostMsgMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessag
 	}
 }
 
+func handleGetMsgsMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	send(&MessageFail{Message: "not implemented"})
+}
+
 // messageHandler - handles messages received from users
 func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	if !connInfo.loggedIn {
@@ -238,6 +242,8 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 			handleSubscribeMessage(mel, connInfo, message, send)
 		case *MessagePostMsg:
 			handlePostMsgMessage(mel, connInfo, message, send)
+		case *MessageGetMsgs:
+			handleGetMsgsMessage(mel, connInfo, message, send)
 		}
 	}
 }

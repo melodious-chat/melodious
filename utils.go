@@ -41,4 +41,5 @@ type ChatMessage struct {
 	Pings     []string `json:"pings"`
 	ID        int      `json:"id"`
 	Timestamp string   `json:"timestamp"`
+	Author    string   `json:"author"`
 }

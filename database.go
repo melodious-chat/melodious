@@ -329,6 +329,26 @@ func (db *Database) PostMessageChanID(chanID int, message string, pings []string
 	return nil
 }
 
+// GetMessages - gets last n messages in a channel starting from an id from the database
+func (db *Database) GetMessages(chanid int, msgid int, amount int) ([]*ChatMessage, error) {
+	rows, err := db.db.Query(`
+		SELECT id, message, dt, pings, author FROM melodious.messages WHERE chan_id=$1 AND id<$2 ORDER BY id DESC LIMIT $3;
+	`, chanid, msgid, amount)
+	if err != nil {
+		return []*ChatMessage{&ChatMessage{}}, err
+	}
+	msgs := []*ChatMessage{}
+	for count := 0; rows.Next(); count++ {
+		msg := &ChatMessage{}
+		err := rows.Scan(&(msg.ID), &(msg.Message), &(msg.Timestamp), &(msg.Pings), &(msg.Author))
+		if err != nil {
+			return []*ChatMessage{}, err
+		}
+		msgs[count] = msg
+	}
+	return msgs, nil
+}
+
 // AddGroup - adds a group
 func (db *Database) AddGroup(name string) (int, error) {
 	row := db.db.QueryRow(`

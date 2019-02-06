@@ -285,6 +285,27 @@ func (m *MessagePostMsg) GetData() *MessageData {
 	return m.md
 }
 
+// MessageGetMsgs - gets messages from the server
+type MessageGetMsgs struct {
+	md        *MessageData
+	ChannelID int
+	MessageID int
+	Amount    int
+}
+
+// GetType - MessageGetMsgs.
+func (m *MessageGetMsgs) GetType() string {
+	return "get-messages"
+}
+
+// GetData - gets MessageData.
+func (m *MessageGetMsgs) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	var msg BaseMessage
@@ -374,6 +395,17 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 			hasAuthor = true
 		}
 		msg = &MessagePostMsg{Content: iface["content"].(string), Channel: iface["channel"].(string), Author: author, HasAuthor: hasAuthor}
+	case "get-messages":
+		if _, ok := iface["channel-id"]; !ok {
+			return nil, errors.New("no channel-id field in get-messages message")
+		}
+		if _, ok := iface["message-id"]; !ok {
+			return nil, errors.New("no message-id field in get-messages message")
+		}
+		if _, ok := iface["amount"]; !ok {
+			return nil, errors.New("no amount field in get-messages message")
+		}
+		msg = &MessageGetMsgs{ChannelID: iface["channel-id"].(int), MessageID: iface["message-id"].(int), Amount: iface["amount"].(int)}
 	}
 
 	if msg != nil {
@@ -423,6 +455,8 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		} else {
 			out = map[string]interface{}{"type": "post-message", "content": msg.(*MessagePostMsg).Content, "channel": msg.(*MessagePostMsg).Channel}
 		}
+	case *MessageGetMsgs:
+		out = map[string]interface{}{"type": "get-messages", "channel-id": msg.(*MessageGetMsgs).ChannelID, "message-id": msg.(*MessageGetMsgs).MessageID, "amount": msg.(*MessageGetMsgs).Amount}
 	default:
 		return nil, errors.New("invalid type")
 	}
