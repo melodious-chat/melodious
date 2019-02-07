@@ -1,6 +1,8 @@
 package main
 
-import "github.com/apex/log"
+import (
+	"github.com/apex/log"
+)
 
 // Note: fatals are sent on database errors only in response to register and login
 
@@ -216,7 +218,6 @@ func handlePostMsgMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessag
 }
 
 func handleGetMsgsMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
-	//send(&MessageFail{Message: "not implemented"})
 	request := message.(*MessageGetMsgs)
 	msgs, err := mel.Database.GetMessages(request.ChannelID, request.MessageID, request.Amount)
 	if err != nil {
@@ -228,6 +229,23 @@ func handleGetMsgsMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessag
 		}).Error("error when fetching messages")
 	} else {
 		send(&MessageGetMsgsResult{Messages: msgs})
+	}
+}
+
+func handleListChannelsMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	if message.(*MessageListChannels).HasChannels {
+		send(&MessageNote{Message: "you cannot set channels field in list-channels message"})
+	}
+	channels, err := mel.Database.ListChannels()
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when listing channels")
+	} else {
+		send(&MessageListChannels{Channels: channels, HasChannels: true})
 	}
 }
 
@@ -256,6 +274,8 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 			handlePostMsgMessage(mel, connInfo, message, send)
 		case *MessageGetMsgs:
 			handleGetMsgsMessage(mel, connInfo, message, send)
+		case *MessageListChannels:
+			handleListChannelsMessage(mel, connInfo, message, send)
 		}
 	}
 }

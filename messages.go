@@ -308,8 +308,9 @@ func (m *MessageGetMsgs) GetData() *MessageData {
 
 // MessageGetMsgsResult - sends fetched messages
 type MessageGetMsgsResult struct {
-	md       *MessageData
-	Messages []*ChatMessage
+	md          *MessageData
+	Messages    []*ChatMessage
+	HasChannels bool
 }
 
 // GetType - MessageGetMsgsResult.
@@ -319,6 +320,26 @@ func (m *MessageGetMsgsResult) GetType() string {
 
 // GetData - gets MessageData.
 func (m *MessageGetMsgsResult) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
+// MessageListChannels - lists channels
+type MessageListChannels struct {
+	md          *MessageData
+	Channels    map[string]interface{}
+	HasChannels bool
+}
+
+// GetType - MessageListChannels.
+func (m *MessageListChannels) GetType() string {
+	return "list-channels"
+}
+
+// GetData - gets MessageData.
+func (m *MessageListChannels) GetData() *MessageData {
 	if m.md == nil {
 		m.md = &MessageData{}
 	}
@@ -430,6 +451,14 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 			return nil, errors.New("no messages field in get-messages-result message")
 		}
 		msg = &MessageGetMsgsResult{Messages: iface["messages"].([]*ChatMessage)}
+	case "list-channels":
+		channels := map[string]interface{}{}
+		hasChannels := false
+		if _, ok := iface["channels"]; ok {
+			channels = iface["channels"].(map[string]interface{})
+			hasChannels = true
+		}
+		msg = &MessageListChannels{Channels: channels, HasChannels: hasChannels}
 	}
 
 	if msg != nil {
@@ -483,6 +512,12 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		out = map[string]interface{}{"type": "get-messages", "channel-id": msg.(*MessageGetMsgs).ChannelID, "message-id": msg.(*MessageGetMsgs).MessageID, "amount": msg.(*MessageGetMsgs).Amount}
 	case *MessageGetMsgsResult:
 		out = map[string]interface{}{"type": "get-messages-result", "messages": msg.(*MessageGetMsgsResult).Messages}
+	case *MessageListChannels:
+		if msg.(*MessageListChannels).HasChannels {
+			out = map[string]interface{}{"type": "list-channels", "channels": msg.(*MessageListChannels).Channels}
+		} else {
+			out = map[string]interface{}{"type": "list-channels"}
+		}
 	default:
 		return nil, errors.New("invalid type")
 	}

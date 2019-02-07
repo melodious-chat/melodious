@@ -246,7 +246,7 @@ func (db *Database) DeleteChannelID(id int) error {
 }
 
 // ListChannels - puts all channel names into a map
-func (db *Database) ListChannels() (map[string]int, error) {
+func (db *Database) ListChannels() (map[string]interface{}, error) {
 	rows, err := db.db.Query(`
 		SELECT name, id FROM melodious.channels;
 	`)
@@ -255,7 +255,8 @@ func (db *Database) ListChannels() (map[string]int, error) {
 	}
 	defer rows.Close()
 
-	var m map[string]int
+	//var m map[string]int
+	m := map[string]interface{}{}
 
 	for rows.Next() {
 		var name string
