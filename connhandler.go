@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"runtime/debug"
 	"sync"
 
 	"github.com/apex/log"
@@ -65,7 +66,9 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 							"name": connInfo.username,
 							"err":  err,
 						}).Error("panic while receiving a message")
+						debug.PrintStack()
 						running = false
+						conn.Close()
 					}
 				}()
 				if !running {
@@ -123,7 +126,9 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 								"name": connInfo.username,
 								"err":  err,
 							}).Error("panic while sending a message")
+							debug.PrintStack()
 							running = false
+							conn.Close()
 						}
 					}()
 					if !running {

@@ -314,7 +314,7 @@ func (db *Database) PostMessage(chanName string, message string, pings []string,
 func (db *Database) PostMessageChanID(chanID int, message string, pings []string, author string) error {
 	_, err := db.db.Exec(`
 		INSERT INTO melodious.messages
-		(chan_id, message, dt, pings, author)
+		(chan_id, message, dt, pings, author_id)
 		VALUES (
 			(SELECT id FROM melodious.channels WHERE id=$1 LIMIT 1),
 			$2,
@@ -332,19 +332,33 @@ func (db *Database) PostMessageChanID(chanID int, message string, pings []string
 // GetMessages - gets last n messages in a channel starting from an id from the database
 func (db *Database) GetMessages(chanid int, msgid int, amount int) ([]*ChatMessage, error) {
 	rows, err := db.db.Query(`
-		SELECT id, message, dt, pings, author FROM melodious.messages WHERE chan_id=$1 AND id<$2 ORDER BY id DESC LIMIT $3;
+		SELECT
+			m.id,
+			m.message,
+			m.dt,
+			m.pings,
+			a.username author,
+			m.author_id
+		FROM melodious.messages m
+		INNER JOIN melodious.accounts a ON m.author_id = a.id
+		WHERE m.chan_id=$1 AND m.id<$2
+		ORDER BY m.id DESC
+		LIMIT $3;
 	`, chanid, msgid, amount)
 	if err != nil {
 		return []*ChatMessage{}, err
 	}
 	msgs := []*ChatMessage{}
-	for count := 0; rows.Next(); count++ {
+	for rows.Next() {
 		msg := &ChatMessage{}
-		err := rows.Scan(&(msg.ID), &(msg.Message), &(msg.Timestamp), &(msg.Pings), &(msg.Author))
+		var aid int // unused
+		var pings pq.StringArray
+		err := rows.Scan(&(msg.ID), &(msg.Message), &(msg.Timestamp), &pings, &(msg.Author), &aid)
 		if err != nil {
 			return []*ChatMessage{}, err
 		}
-		msgs[count] = msg
+		msg.Pings = []string(pings)
+		msgs = append(msgs, msg)
 	}
 	return msgs, nil
 }

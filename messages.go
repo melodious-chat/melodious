@@ -424,7 +424,7 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 		if _, ok := iface["amount"]; !ok {
 			return nil, errors.New("no amount field in get-messages message")
 		}
-		msg = &MessageGetMsgs{ChannelID: iface["channel-id"].(int), MessageID: iface["message-id"].(int), Amount: iface["amount"].(int)}
+		msg = &MessageGetMsgs{ChannelID: int(iface["channel-id"].(float64)), MessageID: int(iface["message-id"].(float64)), Amount: int(iface["amount"].(float64))}
 	case "get-messages-result":
 		if _, ok := iface["messages"]; !ok {
 			return nil, errors.New("no messages field in get-messages-result message")
