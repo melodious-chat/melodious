@@ -335,7 +335,7 @@ func (db *Database) GetMessages(chanid int, msgid int, amount int) ([]*ChatMessa
 		SELECT id, message, dt, pings, author FROM melodious.messages WHERE chan_id=$1 AND id<$2 ORDER BY id DESC LIMIT $3;
 	`, chanid, msgid, amount)
 	if err != nil {
-		return []*ChatMessage{&ChatMessage{}}, err
+		return []*ChatMessage{}, err
 	}
 	msgs := []*ChatMessage{}
 	for count := 0; rows.Next(); count++ {

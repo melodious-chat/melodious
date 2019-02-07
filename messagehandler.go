@@ -216,7 +216,19 @@ func handlePostMsgMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessag
 }
 
 func handleGetMsgsMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
-	send(&MessageFail{Message: "not implemented"})
+	//send(&MessageFail{Message: "not implemented"})
+	request := message.(*MessageGetMsgs)
+	msgs, err := mel.Database.GetMessages(request.ChannelID, request.MessageID, request.Amount)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when fetching messages")
+	} else {
+		send(&MessageGetMsgsResult{Messages: msgs})
+	}
 }
 
 // messageHandler - handles messages received from users

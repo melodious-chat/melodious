@@ -306,6 +306,25 @@ func (m *MessageGetMsgs) GetData() *MessageData {
 	return m.md
 }
 
+// MessageGetMsgsResult - sends fetched messages
+type MessageGetMsgsResult struct {
+	md       *MessageData
+	Messages []*ChatMessage
+}
+
+// GetType - MessageGetMsgsResult.
+func (m *MessageGetMsgsResult) GetType() string {
+	return "get-messages-result"
+}
+
+// GetData - gets MessageData.
+func (m *MessageGetMsgsResult) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	var msg BaseMessage
@@ -406,6 +425,11 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 			return nil, errors.New("no amount field in get-messages message")
 		}
 		msg = &MessageGetMsgs{ChannelID: iface["channel-id"].(int), MessageID: iface["message-id"].(int), Amount: iface["amount"].(int)}
+	case "get-messages-result":
+		if _, ok := iface["messages"]; !ok {
+			return nil, errors.New("no messages field in get-messages-result message")
+		}
+		msg = &MessageGetMsgsResult{Messages: iface["messages"].([]*ChatMessage)}
 	}
 
 	if msg != nil {
@@ -457,6 +481,8 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		}
 	case *MessageGetMsgs:
 		out = map[string]interface{}{"type": "get-messages", "channel-id": msg.(*MessageGetMsgs).ChannelID, "message-id": msg.(*MessageGetMsgs).MessageID, "amount": msg.(*MessageGetMsgs).Amount}
+	case *MessageGetMsgsResult:
+		out = map[string]interface{}{"type": "get-messages-result", "messages": msg.(*MessageGetMsgsResult).Messages}
 	default:
 		return nil, errors.New("invalid type")
 	}
