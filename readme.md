@@ -52,4 +52,5 @@ An example config file:
 
 * Implement a working prototype
   * Implement flag-based permissions
+  * Implement clientside functions and messages
 * Add a REST API for those who cannot use websockets
