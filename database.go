@@ -351,9 +351,8 @@ func (db *Database) GetMessages(chanid int, msgid int, amount int) ([]*ChatMessa
 	msgs := []*ChatMessage{}
 	for rows.Next() {
 		msg := &ChatMessage{}
-		var aid int // unused
 		var pings pq.StringArray
-		err := rows.Scan(&(msg.ID), &(msg.Message), &(msg.Timestamp), &pings, &(msg.Author), &aid)
+		err := rows.Scan(&(msg.ID), &(msg.Message), &(msg.Timestamp), &pings, &(msg.Author), &(msg.AuthorID))
 		if err != nil {
 			return []*ChatMessage{}, err
 		}

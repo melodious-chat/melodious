@@ -42,4 +42,5 @@ type ChatMessage struct {
 	ID        int      `json:"id"`
 	Timestamp string   `json:"timestamp"`
 	Author    string   `json:"author"`
+	AuthorID  int      `json:"author_id"`
 }
