@@ -249,6 +249,29 @@ func handleListChannelsMessage(mel *Melodious, connInfo *ConnInfo, message BaseM
 	}
 }
 
+func handleListUsersMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	if message.(*MessageListUsers).HasUsers {
+		send(&MessageNote{Message: "you cannot set users field in list-users message"})
+	}
+	users, err := mel.Database.GetUsersList()
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when getting users list")
+	} else {
+		//send(&MessageListUsers{Users: users, HasUsers: true})
+		statuses := []*UserStatus{}
+		for _, user := range users {
+			_, online := mel.UserConns.Load(user.Username)
+			statuses = append(statuses, &UserStatus{User: user, Online: online})
+		}
+		send(&MessageListUsers{Users: statuses, HasUsers: true})
+	}
+}
+
 // messageHandler - handles messages received from users
 func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	if !connInfo.loggedIn {
@@ -276,6 +299,8 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 			handleGetMsgsMessage(mel, connInfo, message, send)
 		case *MessageListChannels:
 			handleListChannelsMessage(mel, connInfo, message, send)
+		case *MessageListUsers:
+			handleListUsersMessage(mel, connInfo, message, send)
 		}
 	}
 }

@@ -308,9 +308,8 @@ func (m *MessageGetMsgs) GetData() *MessageData {
 
 // MessageGetMsgsResult - sends fetched messages
 type MessageGetMsgsResult struct {
-	md          *MessageData
-	Messages    []*ChatMessage
-	HasChannels bool
+	md       *MessageData
+	Messages []*ChatMessage
 }
 
 // GetType - MessageGetMsgsResult.
@@ -340,6 +339,26 @@ func (m *MessageListChannels) GetType() string {
 
 // GetData - gets MessageData.
 func (m *MessageListChannels) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
+// MessageListUsers - lists users
+type MessageListUsers struct {
+	md       *MessageData
+	Users    []*UserStatus // todo custom status messages
+	HasUsers bool
+}
+
+// GetType - MessageListUsers.
+func (m *MessageListUsers) GetType() string {
+	return "list-users"
+}
+
+// GetData - gets MessageData.
+func (m *MessageListUsers) GetData() *MessageData {
 	if m.md == nil {
 		m.md = &MessageData{}
 	}
@@ -459,6 +478,15 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 			hasChannels = true
 		}
 		msg = &MessageListChannels{Channels: channels, HasChannels: hasChannels}
+	case "list-users":
+		//users := []*User{}
+		users := []*UserStatus{}
+		hasUsers := false
+		if _, ok := iface["users"]; ok {
+			users = iface["users"].([]*UserStatus)
+			hasUsers = true
+		}
+		msg = &MessageListUsers{Users: users, HasUsers: hasUsers}
 	}
 
 	if msg != nil {
@@ -517,6 +545,12 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 			out = map[string]interface{}{"type": "list-channels", "channels": msg.(*MessageListChannels).Channels}
 		} else {
 			out = map[string]interface{}{"type": "list-channels"}
+		}
+	case *MessageListUsers:
+		if msg.(*MessageListUsers).HasUsers {
+			out = map[string]interface{}{"type": "list-users", "users": msg.(*MessageListUsers).Users}
+		} else {
+			out = map[string]interface{}{"type": "list-users"}
 		}
 	default:
 		return nil, errors.New("invalid type")

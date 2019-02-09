@@ -173,3 +173,69 @@ author: username of the user who sent this message
 Sent by client: Posts a message in a specific channel (the "author" field does not need to be sent).
 
 Sent by server: Notifies about a sent message in a specific channel.
+
+### get-messages (sent by client)
+
+```json
+{
+    "type": "get-messages",
+    "channel-id": <int>,
+    "message-id": <int>,
+    "amount": <int>
+}
+```
+
+### get-messages-result (sent by server)
+
+```json
+{
+    "type": "get-messages-result",
+    "messages": []
+}
+```
+
+TODO
+
+### list-channels
+
+```json
+{
+    "type": "list-channels",
+    "channels": {
+        "<string>": <int>,
+        ...
+    }
+}
+```
+
+channels: a map in which channel name is a key and ID is a value
+
+Sent by client: Tells the server to fetch all channels that exist (the "channels" field does not need to be sent).
+
+Sent by server: Returns the client a channelname:id map
+
+### list-users
+
+```json
+{
+    "type": "list-users",
+    "users": [
+        {"User": {
+            "ID": <int>,
+            "Username": "<string>",
+            "Owner": <bool>
+        }, "Online": <bool>},
+        ...
+    ]
+}
+```
+
+users: an array:
+
+User: an user.
+
+Online: whether or not the user is connected to the server.
+
+Sent by client: Tells the server to fetch all users that are registered (the "users" field does not need to be sent).
+
+Sent by server: Returns the client an array of users with their status of connection.

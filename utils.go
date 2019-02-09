@@ -44,3 +44,16 @@ type ChatMessage struct {
 	Author    string   `json:"author"`
 	AuthorID  int      `json:"author_id"`
 }
+
+// User - describes a user in the database
+type User struct {
+	ID       int
+	Username string
+	Owner    bool
+}
+
+// UserStatus - describes the status of a user
+type UserStatus struct {
+	User   *User
+	Online bool
+}

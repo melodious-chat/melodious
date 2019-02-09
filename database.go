@@ -18,6 +18,26 @@ type Database struct {
 	db  *sql.DB
 }
 
+// GetUsersList - gets users' data stored in the database
+func (db *Database) GetUsersList() ([]*User, error) {
+	rows, err := db.db.Query(`
+		SELECT id, username, owner FROM melodious.accounts;
+	`)
+	if err != nil {
+		return []*User{}, err
+	}
+	users := []*User{}
+	for rows.Next() {
+		user := &User{}
+		err := rows.Scan(&(user.ID), &(user.Username), &(user.Owner))
+		if err != nil {
+			return []*User{}, err
+		}
+		users = append(users, user)
+	}
+	return users, nil
+}
+
 // HasUsers - checks if there are any users registered
 func (db *Database) HasUsers() (bool, error) {
 	row := db.db.QueryRow(`
