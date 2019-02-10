@@ -49,6 +49,10 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 			"text": text,
 			"addr": conn.RemoteAddr().String(),
 		}).Info("one of my connections is closed now")
+		event := &MessageUserQuit{Username: connInfo.username}
+		mel.IterateOverAllConnections(func(connInfo *ConnInfo) {
+			connInfo.messageStream <- event
+		})
 		return nil
 	})
 

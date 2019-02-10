@@ -62,6 +62,10 @@ func handleRegisterMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessa
 		if firstrun {
 			send(&MessageNote{Message: "you are a server owner now"})
 		}
+		event := &MessageRegister{Name: m.Name}
+		mel.IterateOverAllConnections(func(connInfo *ConnInfo) {
+			connInfo.messageStream <- event
+		})
 	}
 }
 
@@ -83,6 +87,10 @@ func handleLoginMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage,
 			"name": m.Name,
 		}).Info("somebody has logged in")
 		send(&MessageOk{Message: "done; you are now logged in"})
+		event := &MessageLogin{Name: m.Name}
+		mel.IterateOverAllConnections(func(connInfo *ConnInfo) {
+			connInfo.messageStream <- event
+		})
 	}
 }
 
@@ -181,6 +189,10 @@ func handleDeleteChannelMessage(mel *Melodious, connInfo *ConnInfo, message Base
 
 func handleQuitMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	connInfo.connection.Close()
+	event := &MessageUserQuit{Username: connInfo.username}
+	mel.IterateOverAllConnections(func(connInfo *ConnInfo) {
+		connInfo.messageStream <- event
+	})
 }
 
 func handleSubscribeMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
@@ -262,7 +274,6 @@ func handleListUsersMessage(mel *Melodious, connInfo *ConnInfo, message BaseMess
 			"err":  err,
 		}).Error("error when getting users list")
 	} else {
-		//send(&MessageListUsers{Users: users, HasUsers: true})
 		statuses := []*UserStatus{}
 		for _, user := range users {
 			_, online := mel.UserConns.Load(user.Username)

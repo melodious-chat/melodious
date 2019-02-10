@@ -365,6 +365,25 @@ func (m *MessageListUsers) GetData() *MessageData {
 	return m.md
 }
 
+// MessageUserQuit - informs clients about someone closing the connection
+type MessageUserQuit struct {
+	md       *MessageData
+	Username string
+}
+
+// GetType - MessageUserQuit.
+func (m *MessageUserQuit) GetType() string {
+	return "user-quit"
+}
+
+// GetData - gets MessageData.
+func (m *MessageUserQuit) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	var msg BaseMessage
@@ -479,7 +498,6 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 		}
 		msg = &MessageListChannels{Channels: channels, HasChannels: hasChannels}
 	case "list-users":
-		//users := []*User{}
 		users := []*UserStatus{}
 		hasUsers := false
 		if _, ok := iface["users"]; ok {
@@ -487,6 +505,10 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 			hasUsers = true
 		}
 		msg = &MessageListUsers{Users: users, HasUsers: hasUsers}
+	case "user-quit":
+		if _, ok := iface["username"]; !ok {
+			return nil, errors.New("no username field in user-quit message")
+		}
 	}
 
 	if msg != nil {
@@ -552,6 +574,8 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		} else {
 			out = map[string]interface{}{"type": "list-users"}
 		}
+	case *MessageUserQuit:
+		out = map[string]interface{}{"type": "user-quit", "username": msg.(*MessageUserQuit).Username}
 	default:
 		return nil, errors.New("invalid type")
 	}
