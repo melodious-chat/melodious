@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/apex/log"
 )
 
@@ -97,15 +99,15 @@ func handleLoginMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage,
 func handleNewChannelMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	cn, ct := message.(*MessageNewChannel).Name, message.(*MessageNewChannel).Topic
 	nc := &MessageNewChannel{Name: cn, Topic: ct}
-	owner, err := mel.Database.IsUserOwner(connInfo.username)
+	can, err := connInfo.HasPerm(cn, "perms.new-channel")
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
 		log.WithFields(log.Fields{
 			"addr": connInfo.connection.RemoteAddr().String(),
 			"name": connInfo.username,
 			"err":  err,
-		}).Error("error when checking if user is an owner")
-	} else if owner {
+		}).Error("error when checking if user can create a channel")
+	} else if can {
 		err = mel.Database.NewChannel(cn, ct)
 		if err != nil {
 			send(&MessageFail{Message: "sorry, an internal database error has occured"})
@@ -128,15 +130,15 @@ func handleNewChannelMessage(mel *Melodious, connInfo *ConnInfo, message BaseMes
 func handleChannelTopicMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	cn, ct := message.(*MessageChannelTopic).Name, message.(*MessageChannelTopic).Topic
 	mct := &MessageChannelTopic{Name: cn, Topic: ct}
-	owner, err := mel.Database.IsUserOwner(connInfo.username)
+	can, err := connInfo.HasPerm(cn, "perms.channel-topic")
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
 		log.WithFields(log.Fields{
 			"addr": connInfo.connection.RemoteAddr().String(),
 			"name": connInfo.username,
 			"err":  err,
-		}).Error("error when checking if user is an owner")
-	} else if owner {
+		}).Error("error when checking if user can change channel topic")
+	} else if can {
 		err = mel.Database.SetChannelTopic(cn, ct)
 		if err != nil {
 			send(&MessageFail{Message: "sorry, an internal database error has occured"})
@@ -159,15 +161,15 @@ func handleChannelTopicMessage(mel *Melodious, connInfo *ConnInfo, message BaseM
 func handleDeleteChannelMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	cn := message.(*MessageDeleteChannel).Name
 	dc := &MessageDeleteChannel{Name: cn}
-	owner, err := mel.Database.IsUserOwner(connInfo.username)
+	can, err := connInfo.HasPerm(cn, "perms.delete-channel")
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
 		log.WithFields(log.Fields{
 			"addr": connInfo.connection.RemoteAddr().String(),
 			"name": connInfo.username,
 			"err":  err,
-		}).Error("error when checking if user is an owner")
-	} else if owner {
+		}).Error("error when checking if user can delete a channel")
+	} else if can {
 		err = mel.Database.DeleteChannel(cn)
 		if err != nil {
 			send(&MessageFail{Message: "sorry, an internal database error has occured"})
@@ -196,6 +198,21 @@ func handleQuitMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, 
 }
 
 func handleSubscribeMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	can, err := connInfo.HasPerm(message.(*MessageSubscribe).Name, "perms.subscribe")
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if user can (un)subscribe to a channel")
+		return
+	}
+	if !can {
+		send(&MessageFail{Message: "no permissions"})
+		return
+	}
+
 	if message.(*MessageSubscribe).Subbed {
 		connInfo.subscriptions.Store(message.(*MessageSubscribe).Name, message.(*MessageSubscribe).Subbed)
 		send(&MessageOk{Message: "subscribed to channel " + message.(*MessageSubscribe).Name})
@@ -206,11 +223,26 @@ func handleSubscribeMessage(mel *Melodious, connInfo *ConnInfo, message BaseMess
 }
 
 func handlePostMsgMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	can, err := connInfo.HasPerm(message.(*MessageSubscribe).Name, "perms.post-message")
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if user can post a message")
+		return
+	}
+	if !can {
+		send(&MessageFail{Message: "no permissions"})
+		return
+	}
+
 	if message.(*MessagePostMsg).HasAuthor {
 		send(&MessageNote{Message: "you cannot set author field in post-message message"})
 	}
 	author := connInfo.username
-	err := mel.Database.PostMessage(message.(*MessagePostMsg).Channel, message.(*MessagePostMsg).Content, []string{""}, author) // todo pings
+	err = mel.Database.PostMessage(message.(*MessagePostMsg).Channel, message.(*MessagePostMsg).Content, []string{""}, author) // todo pings
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
 		log.WithFields(log.Fields{
@@ -231,6 +263,22 @@ func handlePostMsgMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessag
 
 func handleGetMsgsMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	request := message.(*MessageGetMsgs)
+
+	can, err := connInfo.HasPermChID(request.ChannelID, "perms.get-messages")
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if user can get messages")
+		return
+	}
+	if !can {
+		send(&MessageFail{Message: "no permissions"})
+		return
+	}
+
 	msgs, err := mel.Database.GetMessages(request.ChannelID, request.MessageID, request.Amount)
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
@@ -245,6 +293,21 @@ func handleGetMsgsMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessag
 }
 
 func handleListChannelsMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	can, err := connInfo.HasPerm("", "perms.list-channels")
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if user can list channels")
+		return
+	}
+	if !can {
+		send(&MessageFail{Message: "no permissions"})
+		return
+	}
+
 	if message.(*MessageListChannels).HasChannels {
 		send(&MessageNote{Message: "you cannot set channels field in list-channels message"})
 	}
@@ -262,6 +325,21 @@ func handleListChannelsMessage(mel *Melodious, connInfo *ConnInfo, message BaseM
 }
 
 func handleListUsersMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	can, err := connInfo.HasPerm("", "perms.list-users")
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if user can list users")
+		return
+	}
+	if !can {
+		send(&MessageFail{Message: "no permissions"})
+		return
+	}
+
 	if message.(*MessageListUsers).HasUsers {
 		send(&MessageNote{Message: "you cannot set users field in list-users message"})
 	}
@@ -285,6 +363,18 @@ func handleListUsersMessage(mel *Melodious, connInfo *ConnInfo, message BaseMess
 
 // messageHandler - handles messages received from users
 func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	defer func() {
+		if err := recover(); err != nil {
+			send(&MessageFail{Message: fmt.Sprintf("%U", err)})
+			log.WithFields(log.Fields{
+				"addr": connInfo.connection.RemoteAddr().String(),
+				"name": connInfo.username,
+				"err":  err,
+			}).Error("panic while receiving a message")
+			connInfo.connection.Close()
+		}
+	}()
+
 	if !connInfo.loggedIn {
 		switch message.(type) {
 		case *MessageRegister:

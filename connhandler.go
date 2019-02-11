@@ -11,11 +11,53 @@ import (
 
 // ConnInfo - stores some info about a connection
 type ConnInfo struct {
+	mel           *Melodious
 	connection    *websocket.Conn
 	messageStream chan<- BaseMessage
 	subscriptions *sync.Map
 	loggedIn      bool
 	username      string
+}
+
+// HasFlag - checks if the given connection has the given flag
+func (connInfo *ConnInfo) HasFlag(channel string, flag string) (bool, error) {
+	if !connInfo.loggedIn {
+		return false, nil
+	}
+	has, err := connInfo.mel.Database.HasFlag(connInfo.username, channel, flag)
+	return has, err
+}
+
+// HasPerm - checks if the given connection has the given permission
+func (connInfo *ConnInfo) HasPerm(channel string, flag string) (bool, error) {
+	if !connInfo.loggedIn {
+		return false, nil
+	}
+	owner, err := connInfo.mel.Database.IsUserOwner(connInfo.username)
+	if err != nil {
+		return false, nil
+	}
+	if owner {
+		return true, nil
+	}
+	has, err := connInfo.mel.Database.HasFlag(connInfo.username, channel, flag)
+	return has, err
+}
+
+// HasPermChID - checks if the given connection has the given permission
+func (connInfo *ConnInfo) HasPermChID(channel int, flag string) (bool, error) {
+	if !connInfo.loggedIn {
+		return false, nil
+	}
+	owner, err := connInfo.mel.Database.IsUserOwner(connInfo.username)
+	if err != nil {
+		return false, nil
+	}
+	if owner {
+		return true, nil
+	}
+	has, err := connInfo.mel.Database.HasFlagChID(connInfo.username, channel, flag)
+	return has, err
 }
 
 // handleConnection Handles users which are connected to Melodious
@@ -24,6 +66,7 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 	messageStream := make(chan BaseMessage)
 
 	connInfo := &ConnInfo{
+		mel:           mel,
 		connection:    conn,
 		messageStream: messageStream,
 		subscriptions: &sync.Map{},

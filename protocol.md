@@ -116,6 +116,8 @@ It is recommended that server stores hash sum of the hash sum of the password to
 }
 ```
 
+User needs perms.new-channel(user=$user,channel=$channel) flag or owner status to do that.
+
 name: channel name; maximum 32 characters
 
 Sent by client: Creates a new channel. If such channel already exists or user is not an owner, server MUST return a `fail` message.
@@ -130,6 +132,8 @@ Sent by server: Notifies about a new channel.
     "name": "<string>"
 }
 ```
+
+User needs perms.delete-channel flag or owner status to do that.
 
 name: channel name; maximum 32 characters
 
@@ -147,6 +151,8 @@ Sent by server: Notifies about a deleted channel. May mention non-existing chann
 }
 ```
 
+User needs perms.subscribe flag or owner status to do that.
+
 name: channel name; maximum 32 characters
 
 subbed: true or false maps to subscribed or unsubscribed respectively
@@ -163,6 +169,8 @@ subbed: true or false maps to subscribed or unsubscribed respectively
     "author": "<string>"
 }
 ```
+
+User needs perms.post-message flag or owner status to do that.
 
 content: message contents; maximum 2048 characters
 
@@ -184,6 +192,8 @@ Sent by server: Notifies about a sent message in a specific channel.
     "amount": <int>
 }
 ```
+
+User needs perms.get-messages flag or owner status to do that.
 
 ### get-messages-result (sent by server)
 
@@ -207,6 +217,8 @@ TODO
     }
 }
 ```
+
+User needs perms.list-channels flag or owner status to do that.
 
 channels: a map in which channel name is a key and ID is a value
 
@@ -232,6 +244,8 @@ Sent by server: Returns the client a channelname:id map
     ]
 }
 ```
+
+User needs perms.list-users flag or owner status to do that.
 
 users: an array:
 

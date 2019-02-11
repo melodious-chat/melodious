@@ -504,6 +504,36 @@ func (db *Database) QueryFlags(user string, channel string, group string, flag s
 	return s, nil
 }
 
+// HasFlag - checks if given user has a flag
+func (db *Database) HasFlag(user string, channel string, flag string) (bool, error) {
+	row := db.db.QueryRow(`
+		SELECT EXISTS(SELECT 1 FROM melodious.query_flags($1, $2, '', $3, true) LIMIT 1);
+	`, user, channel, flag)
+
+	var exists bool
+	err := row.Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
+// HasFlagChID - checks if given user has a flag
+func (db *Database) HasFlagChID(user string, channel int, flag string) (bool, error) {
+	row := db.db.QueryRow(`
+		SELECT EXISTS(SELECT 1 FROM melodious.query_flags($1, (SELECT name FROM melodious.channels WHERE id=$2 LIMIT 1), '', $3, true) LIMIT 1);
+	`, user, channel, flag)
+
+	var exists bool
+	err := row.Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
 // NewDatabase - creates a new Database instance
 func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	db, err := sql.Open("postgres", addr)
