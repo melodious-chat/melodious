@@ -647,13 +647,13 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 			IF gid IS NULL THEN
 				RAISE EXCEPTION 'no such group';
 			END IF;
-			IF user_name IS NOT NULL THEN
+			IF user_name <> '' THEN
 				SELECT id INTO uid FROM melodious.accounts WHERE username=user_name;
 				IF uid IS NULL THEN
 					RAISE EXCEPTION 'no such user';
 				END IF;
 			END IF;
-			IF chan_name IS NOT NULL THEN
+			IF chan_name <> '' THEN
 				SELECT id INTO cid FROM melodious.channels WHERE name=chan_name;
 				IF cid IS NULL THEN
 					RAISE EXCEPTION 'no such channel';
