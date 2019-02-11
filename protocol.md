@@ -62,7 +62,7 @@ Server MUST close the connection after sending this message.
 
 These messages are used to notify user about results of operations started by the user.
 
-### register (sent by client)
+### register 
 
 ```json
 {
@@ -73,7 +73,12 @@ These messages are used to notify user about results of operations started by th
 ```
 
 name: Username. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
+
 pass: Password. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
+
+Sent by client: Registers the client on the server.
+
+Sent by server: Indicates a user register event.
 
 If user with username `name` already exists, server MUST send a `fatal` message.
 
@@ -85,7 +90,7 @@ It is recommended that server stores hash sum of the hash sum of the password to
 
 After registering user MUST be treated as logged in.
 
-### login (sent by client)
+### login
 
 ```json
 {
@@ -96,7 +101,12 @@ After registering user MUST be treated as logged in.
 ```
 
 name: Username. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
+
 pass: Password. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
+
+Sent by client: Logs the client in.
+
+Sent by server: Indicates a login (online) event.
 
 If user with username `name` does not exist or SHA256 hash/checksum `hash` is invalid, server MUST send a `fatal` message.
 
@@ -140,6 +150,24 @@ name: channel name; maximum 32 characters
 Sent by client: Deletes a channel.
 
 Sent by server: Notifies about a deleted channel. May mention non-existing channel.
+
+### channel-topic (sent by client)
+
+```json
+{
+    "type": "channel-topic",
+    "name": "<string>",
+    "topic": "<string>"
+}
+```
+
+User needs perms.channel-topic flag or owner status to do that.
+
+name: channel name; maximum 32 characters
+
+topic: channel topic message; maximum 1024 characters
+
+Changes a channel's topic.
 
 ### subscribe (sent by client)
 
@@ -256,3 +284,16 @@ Online: whether or not the user is connected to the server.
 Sent by client: Tells the server to fetch all users that are registered (the "users" field does not need to be sent).
 
 Sent by server: Returns the client an array of users with their status of connection.
+
+### user-quit (sent by server)
+
+```json
+{
+    "type": "user-quit",
+    "username": "<string>"
+}
+```
+
+username: user's name
+
+Indicates a user disconnect (offline) event.
