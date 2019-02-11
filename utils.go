@@ -47,13 +47,13 @@ type ChatMessage struct {
 
 // User - describes a user in the database
 type User struct {
-	ID       int
-	Username string
-	Owner    bool
+	ID       int    `json:"id"`
+	Username string `json:"username"`
+	Owner    bool   `json:"owner"`
 }
 
 // UserStatus - describes the status of a user
 type UserStatus struct {
-	User   *User
-	Online bool
+	User   *User `json:"user"`
+	Online bool  `json:"online"`
 }

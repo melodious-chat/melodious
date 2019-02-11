@@ -220,11 +220,14 @@ Sent by server: Returns the client a channelname:id map
 {
     "type": "list-users",
     "users": [
-        {"User": {
-            "ID": <int>,
-            "Username": "<string>",
-            "Owner": <bool>
-        }, "Online": <bool>},
+        {
+            "user": {
+                "id": <int>,
+                "username": "<string>",
+                "owner": <bool>
+            },
+            "online": <bool>
+        },
         ...
     ]
 }
