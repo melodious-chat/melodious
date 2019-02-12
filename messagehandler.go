@@ -242,7 +242,7 @@ func handleSubscribeMessage(mel *Melodious, connInfo *ConnInfo, message BaseMess
 }
 
 func handlePostMsgMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
-	can, err := connInfo.HasPerm(message.(*MessageSubscribe).Name, "perms.post-message")
+	can, err := connInfo.HasPerm(message.(*MessagePostMsg).Channel, "perms.post-message")
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
 		log.WithFields(log.Fields{
