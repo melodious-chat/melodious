@@ -384,6 +384,27 @@ func (m *MessageUserQuit) GetData() *MessageData {
 	return m.md
 }
 
+// MessageKick - kicks or kickbans a user
+type MessageKick struct {
+	md       *MessageData
+	ID       int
+	Username string
+	Ban      bool
+}
+
+// GetType - MessageKick.
+func (m *MessageKick) GetType() string {
+	return "kick"
+}
+
+// GetData - gets MessageData.
+func (m *MessageKick) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	var msg BaseMessage
@@ -508,6 +529,29 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	case "user-quit":
 		if _, ok := iface["username"]; !ok {
 			return nil, errors.New("no username field in user-quit message")
+		}
+	case "kick":
+		var hasID bool
+		var hasUsername bool
+		if _, ok := iface["id"]; ok {
+			hasID = true
+		}
+		if _, ok := iface["username"]; ok {
+			hasUsername = true
+		}
+		if hasID && hasUsername {
+			return nil, errors.New("you can't have id and username fields together in kick message")
+		} else if !hasID && !hasUsername {
+			return nil, errors.New("no id or username field in kick message")
+		}
+		if _, ok := iface["ban"]; ok {
+			if hasID {
+				msg = &MessageKick{ID: int(iface["id"].(float64)), Ban: iface["ban"].(bool)}
+			} else if hasUsername {
+				msg = &MessageKick{Username: iface["username"].(string), Ban: iface["ban"].(bool)}
+			}
+		} else {
+			return nil, errors.New("no ban field in kick message")
 		}
 	}
 

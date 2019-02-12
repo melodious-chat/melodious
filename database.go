@@ -76,6 +76,28 @@ func (db *Database) RegisterUserOwner(name string, passhash string, owner bool) 
 	return nil
 }
 
+// DeleteUser - deletes/unregisters a user
+func (db *Database) DeleteUser(name string) error {
+	_, err := db.db.Exec(`
+		DELETE FROM melodious.accounts WHERE username=$1;
+	`, name)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// DeleteUserID - deletes/unregisters a user by their id
+func (db *Database) DeleteUserID(id int) error {
+	_, err := db.db.Exec(`
+		DELETE FROM melodious.accounts WHERE id=$1;
+	`, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // GetUserID - gets id of user with the given username.
 // Always check if returned error is not nil, as it returns -1 on errors
 func (db *Database) GetUserID(name string) (int, error) {
@@ -230,6 +252,31 @@ func (db *Database) SetUserOwnerID(id int, owner bool) error {
 	}
 
 	return nil
+}
+
+// InsertBan - inserts a ban record
+func (db *Database) InsertBan(username string, ip string) error {
+	_, err := db.db.Exec(`
+		INSERT INTO melodious.bans (username, ip) VALUES ($1, $2)
+	`, username, ip)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// IsUserBanned - checks if the given user with ip is banned
+func (db *Database) IsUserBanned(username string, ip string) (bool, error) {
+	row := db.db.QueryRow(`
+		SELECT * FROM melodious.bans WHERE username=$1 OR ip=$2;
+	`, username, ip)
+	err := row.Scan()
+	if err == sql.ErrNoRows {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // NewChannel - creates a new channel
@@ -580,6 +627,16 @@ func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 		return nil, err
 	}
 	log.Info("DB: check/create messages table")
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS melodious.bans (
+			username varchar(32) NOT NULL UNIQUE,
+			ip inet NOT NULL
+		);`)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("DB: check/create bans table")
 
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS melodious.groups (

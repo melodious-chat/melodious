@@ -361,6 +361,49 @@ func handleListUsersMessage(mel *Melodious, connInfo *ConnInfo, message BaseMess
 	}
 }
 
+func handleKickMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	can, err := connInfo.HasPerm("", "perms.kickban")
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if user can kick and ban")
+		return
+	}
+	if !can {
+		send(&MessageFail{Message: "no permissions"})
+		return
+	}
+
+	username := message.(*MessageKick).Username
+
+	mel.IterateOverConnections(username, func(connInfo *ConnInfo) {
+		connInfo.messageStream <- &MessageFatal{Message: "you've been kicked or banned"}
+	})
+	if message.(*MessageKick).Ban {
+		err = mel.Database.DeleteUser(username)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"addr": connInfo.connection.RemoteAddr().String(),
+				"name": connInfo.username,
+				"err":  err,
+			}).Error("error when banning a user")
+			return
+		}
+		err = mel.Database.InsertBan(username, connInfo.connection.RemoteAddr().String())
+		if err != nil {
+			log.WithFields(log.Fields{
+				"addr": connInfo.connection.RemoteAddr().String(),
+				"name": connInfo.username,
+				"err":  err,
+			}).Error("error when banning a user")
+			return
+		}
+	}
+}
+
 // messageHandler - handles messages received from users
 func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	defer func() {
@@ -402,6 +445,8 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 			handleListChannelsMessage(mel, connInfo, message, send)
 		case *MessageListUsers:
 			handleListUsersMessage(mel, connInfo, message, send)
+		case *MessageKick:
+			handleKickMessage(mel, connInfo, message, send)
 		}
 	}
 }

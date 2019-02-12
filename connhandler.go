@@ -35,7 +35,7 @@ func (connInfo *ConnInfo) HasPerm(channel string, flag string) (bool, error) {
 	}
 	owner, err := connInfo.mel.Database.IsUserOwner(connInfo.username)
 	if err != nil {
-		return false, nil
+		return false, err
 	}
 	if owner {
 		return true, nil
@@ -51,7 +51,7 @@ func (connInfo *ConnInfo) HasPermChID(channel int, flag string) (bool, error) {
 	}
 	owner, err := connInfo.mel.Database.IsUserOwner(connInfo.username)
 	if err != nil {
-		return false, nil
+		return false, err
 	}
 	if owner {
 		return true, nil
