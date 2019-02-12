@@ -257,7 +257,7 @@ func (db *Database) SetUserOwnerID(id int, owner bool) error {
 // Ban - sets user's banned flag to true
 func (db *Database) Ban(username string) error {
 	_, err := db.db.Exec(`
-		UPDATE melodious.accounts WHERE username=$1 SET banned=true;
+		UPDATE melodious.accounts SET banned=true WHERE username=$1;
 	`, username)
 	if err != nil {
 		return err
