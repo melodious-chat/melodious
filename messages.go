@@ -405,6 +405,27 @@ func (m *MessageKick) GetData() *MessageData {
 	return m.md
 }
 
+// MessageUnregister - indicates a kick/ban event
+// todo make the user unregister by his own will
+type MessageUnregister struct {
+	md       *MessageData
+	ID       int
+	Username string
+}
+
+// GetType - MessageUnregister.
+func (m *MessageUnregister) GetType() string {
+	return "unregister"
+}
+
+// GetData - gets MessageData.
+func (m *MessageUnregister) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	var msg BaseMessage
@@ -553,6 +574,14 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 		} else {
 			return nil, errors.New("no ban field in kick message")
 		}
+	case "unregister":
+		if _, ok := iface["id"]; !ok {
+			return nil, errors.New("no id field in unregister message")
+		}
+		if _, ok := iface["username"]; !ok {
+			return nil, errors.New("no username field in unregister message")
+		}
+		msg = &MessageUnregister{ID: int(iface["id"].(float64)), Username: iface["username"].(string)}
 	}
 
 	if msg != nil {
@@ -620,6 +649,10 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		}
 	case *MessageUserQuit:
 		out = map[string]interface{}{"type": "user-quit", "username": msg.(*MessageUserQuit).Username}
+	case *MessageKick:
+		// todo, it isn't meant to be sent by server anyways
+	case *MessageUnregister:
+		out = map[string]interface{}{"type": "unregister", "id": msg.(*MessageUnregister).ID, "username": msg.(*MessageUnregister).Username}
 	default:
 		return nil, errors.New("invalid type")
 	}
