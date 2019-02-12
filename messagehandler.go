@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/apex/log"
 )
@@ -14,6 +15,14 @@ func handleRegisterMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessa
 		return
 	}
 	m := message.(*MessageRegister)
+	banned, err := mel.Database.IsUserBanned(m.Name, strings.Split(connInfo.connection.RemoteAddr().String(), ":")[0])
+	if err != nil {
+		send(&MessageFail{Message: err.Error()})
+		return
+	} else if banned {
+		send(&MessageFatal{Message: "you are banned"})
+		return
+	}
 	exists, err := mel.Database.UserExists(m.Name)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -38,9 +47,9 @@ func handleRegisterMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessa
 		}).Error("error when checking if database has users")
 		send(&MessageFatal{Message: "sorry, an internal database error has occured"})
 	} else if firstrun {
-		err = mel.Database.RegisterUserOwner(m.Name, m.Pass, true)
+		err = mel.Database.RegisterUserOwner(m.Name, m.Pass, true, strings.Split(connInfo.connection.RemoteAddr().String(), ":")[0])
 	} else {
-		err = mel.Database.RegisterUser(m.Name, m.Pass)
+		err = mel.Database.RegisterUser(m.Name, m.Pass, strings.Split(connInfo.connection.RemoteAddr().String(), ":")[0])
 	}
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -77,9 +86,19 @@ func handleLoginMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage,
 		return
 	}
 	m := message.(*MessageLogin)
+	banned, err := mel.Database.IsUserBanned(m.Name, strings.Split(connInfo.connection.RemoteAddr().String(), ":")[0])
+	if err != nil {
+		send(&MessageFail{Message: err.Error()})
+		return
+	} else if banned {
+		send(&MessageFatal{Message: "you are banned"})
+		return
+	}
 	ok, err := mel.Database.CheckUserPassword(m.Name, m.Pass)
 	if err != nil {
 		send(&MessageFail{Message: err.Error()})
+	} else if !ok {
+		send(&MessageFatal{Message: "invalid credentials"})
 	} else if ok {
 		connInfo.username = m.Name
 		connInfo.loggedIn = true
@@ -378,21 +397,16 @@ func handleKickMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, 
 	}
 
 	username := message.(*MessageKick).Username
+	if username == connInfo.username {
+		send(&MessageFail{Message: "you can't kick or ban yourself"})
+		return
+	}
 
 	mel.IterateOverConnections(username, func(connInfo *ConnInfo) {
 		connInfo.messageStream <- &MessageFatal{Message: "you've been kicked or banned"}
 	})
 	if message.(*MessageKick).Ban {
-		err = mel.Database.DeleteUser(username)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"addr": connInfo.connection.RemoteAddr().String(),
-				"name": connInfo.username,
-				"err":  err,
-			}).Error("error when banning a user")
-			return
-		}
-		err = mel.Database.InsertBan(username, connInfo.connection.RemoteAddr().String())
+		err = mel.Database.Ban(username)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"addr": connInfo.connection.RemoteAddr().String(),

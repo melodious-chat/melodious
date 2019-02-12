@@ -620,6 +620,8 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		}
 	case *MessageUserQuit:
 		out = map[string]interface{}{"type": "user-quit", "username": msg.(*MessageUserQuit).Username}
+	case *MessageKick:
+		// todo, it isn't meant to be sent by server anyways
 	default:
 		return nil, errors.New("invalid type")
 	}
