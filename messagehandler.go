@@ -402,12 +402,26 @@ func handleKickMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, 
 		return
 	}
 
+	exists, err := mel.Database.UserExists(username)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if a user exists")
+		return
+	} else if !exists {
+		send(&MessageFail{Message: "no such user"})
+		return
+	}
 	mel.IterateOverConnections(username, func(connInfo *ConnInfo) {
 		connInfo.messageStream <- &MessageFatal{Message: "you've been kicked or banned"}
 	})
 	if message.(*MessageKick).Ban {
 		err = mel.Database.Ban(username)
 		if err != nil {
+			send(&MessageFail{Message: "sorry, an internal database error has occured"})
 			log.WithFields(log.Fields{
 				"addr": connInfo.connection.RemoteAddr().String(),
 				"name": connInfo.username,
@@ -415,7 +429,10 @@ func handleKickMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, 
 			}).Error("error when banning a user")
 			return
 		}
+		send(&MessageOk{Message: "kicked and banned user " + username})
+		return
 	}
+	send(&MessageOk{Message: "kicked user " + username})
 }
 
 // messageHandler - handles messages received from users
