@@ -501,6 +501,47 @@ func handleDeleteGroupMessage(mel *Melodious, connInfo *ConnInfo, message BaseMe
 	send(&MessageOk{Message: "deleted group " + message.(*MessageDeleteGroup).Name})
 }
 
+func handleSetFlagMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	can, err := mel.Database.IsUserOwner(connInfo.username)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if user can manage groups")
+		return
+	} else if !can {
+		send(&MessageFail{Message: "no permissions"})
+		return
+	}
+	exists, err := mel.Database.GroupExists(message.(*MessageSetFlag).Group)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if a group exists")
+		return
+	} else if !exists {
+		send(&MessageFail{Message: "no such group"})
+		return
+	}
+	procmsg := message.(*MessageSetFlag)
+	_, err = mel.Database.SetFlag(&Flag{HasID: false, Group: procmsg.Group, Name: procmsg.Name, Flag: procmsg.Flag})
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when setting a flag")
+		return
+	}
+	send(&MessageOk{Message: "set the flag for group " + procmsg.Group})
+}
+
 // messageHandler - handles messages received from users
 func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	defer func() {
@@ -548,6 +589,8 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 			handleNewGroupMessage(mel, connInfo, message, send)
 		case *MessageDeleteGroup:
 			handleDeleteGroupMessage(mel, connInfo, message, send)
+		case *MessageSetFlag:
+			handleSetFlagMessage(mel, connInfo, message, send)
 		}
 	}
 }

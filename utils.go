@@ -2,12 +2,11 @@ package main
 
 // Flag - Describes a flag in the database
 type Flag struct {
-	ID       int
-	HasID    bool
-	Group    string
-	Name     string
-	Flag     map[string]interface{}
-	Priority int
+	ID    int
+	HasID bool
+	Group string
+	Name  string
+	Flag  map[string]interface{}
 }
 
 // GroupHolder - Describes a group holder in the database

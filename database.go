@@ -505,7 +505,7 @@ func (db *Database) GroupExists(name string) (bool, error) {
 }
 
 // SetFlag - sets a flag. Returns a flag id
-func (db *Database) SetFlag(flag Flag) (int, error) {
+func (db *Database) SetFlag(flag *Flag) (int, error) {
 	data, err := json.Marshal(flag.Flag)
 	if err != nil {
 		return -1, err

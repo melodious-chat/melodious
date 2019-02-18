@@ -443,6 +443,27 @@ func (m *MessageDeleteGroup) GetData() *MessageData {
 	return m.md
 }
 
+// MessageSetFlag - sets/adds a flag to the group.
+type MessageSetFlag struct {
+	md    *MessageData
+	Group string
+	Name  string
+	Flag  map[string]interface{}
+}
+
+// GetType - MessageSetFlag.
+func (m *MessageSetFlag) GetType() string {
+	return "set-flag"
+}
+
+// GetData - gets MessageData.
+func (m *MessageSetFlag) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	var msg BaseMessage
@@ -602,6 +623,17 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 			return nil, errors.New("no name field in delete-group message")
 		}
 		msg = &MessageDeleteGroup{Name: iface["name"].(string)}
+	case "set-flag":
+		if _, ok := iface["group"]; !ok {
+			return nil, errors.New("no group field in set-flag message")
+		}
+		if _, ok := iface["name"]; !ok {
+			return nil, errors.New("no name field in set-flag message")
+		}
+		if _, ok := iface["flag"]; !ok {
+			return nil, errors.New("no flag field in set-flag message")
+		}
+		msg = &MessageSetFlag{Group: iface["group"].(string), Name: iface["name"].(string), Flag: iface["flag"].(map[string]interface{})}
 	}
 
 	if msg != nil {
