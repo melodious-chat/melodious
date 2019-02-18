@@ -390,8 +390,7 @@ func handleKickMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, 
 			"err":  err,
 		}).Error("error when checking if user can kick and ban")
 		return
-	}
-	if !can {
+	} else if !can {
 		send(&MessageFail{Message: "no permissions"})
 		return
 	}
@@ -433,6 +432,73 @@ func handleKickMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, 
 		return
 	}
 	send(&MessageOk{Message: "kicked user " + username})
+}
+
+func handleNewGroupMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	can, err := mel.Database.IsUserOwner(connInfo.username)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if user can manage groups")
+		return
+	} else if !can {
+		send(&MessageFail{Message: "no permissions"})
+		return
+	}
+	_, err = mel.Database.AddGroup(message.(*MessageNewGroup).Name)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when adding a group")
+		return
+	}
+	send(&MessageOk{Message: "created group " + message.(*MessageNewGroup).Name})
+}
+
+func handleDeleteGroupMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	can, err := mel.Database.IsUserOwner(connInfo.username)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if user can manage groups")
+		return
+	} else if !can {
+		send(&MessageFail{Message: "no permissions"})
+		return
+	}
+	exists, err := mel.Database.GroupExists(message.(*MessageDeleteGroup).Name)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if a group exists")
+		return
+	} else if !exists {
+		send(&MessageFail{Message: "no such group"})
+		return
+	}
+	err = mel.Database.DeleteGroup(message.(*MessageDeleteGroup).Name)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when deleting a group")
+		return
+	}
+	send(&MessageOk{Message: "deleted group " + message.(*MessageDeleteGroup).Name})
 }
 
 // messageHandler - handles messages received from users
@@ -478,6 +544,10 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 			handleListUsersMessage(mel, connInfo, message, send)
 		case *MessageKick:
 			handleKickMessage(mel, connInfo, message, send)
+		case *MessageNewGroup:
+			handleNewGroupMessage(mel, connInfo, message, send)
+		case *MessageDeleteGroup:
+			handleDeleteGroupMessage(mel, connInfo, message, send)
 		}
 	}
 }

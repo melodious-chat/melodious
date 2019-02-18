@@ -491,6 +491,19 @@ func (db *Database) DeleteGroup(name string) error {
 	return err
 }
 
+// GroupExists - checks if a group exists
+func (db *Database) GroupExists(name string) (bool, error) {
+	row := db.db.QueryRow(`
+		SELECT EXISTS(SELECT * FROM melodious.groups WHERE name=$1);
+	`, name)
+	var exists bool
+	err := row.Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
 // SetFlag - sets a flag. Returns a flag id
 func (db *Database) SetFlag(flag Flag) (int, error) {
 	data, err := json.Marshal(flag.Flag)

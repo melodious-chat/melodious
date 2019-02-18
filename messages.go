@@ -405,6 +405,44 @@ func (m *MessageKick) GetData() *MessageData {
 	return m.md
 }
 
+// MessageNewGroup - creates a group.
+type MessageNewGroup struct {
+	md   *MessageData
+	Name string
+}
+
+// GetType - MessageNewGroup.
+func (m *MessageNewGroup) GetType() string {
+	return "new-group"
+}
+
+// GetData - gets MessageData.
+func (m *MessageNewGroup) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
+// MessageDeleteGroup - deletes a group.
+type MessageDeleteGroup struct {
+	md   *MessageData
+	Name string
+}
+
+// GetType - MessageDeleteGroup.
+func (m *MessageDeleteGroup) GetType() string {
+	return "delete-group"
+}
+
+// GetData - gets MessageData.
+func (m *MessageDeleteGroup) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	var msg BaseMessage
@@ -530,6 +568,7 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 		if _, ok := iface["username"]; !ok {
 			return nil, errors.New("no username field in user-quit message")
 		}
+		msg = &MessageUserQuit{Username: iface["username"].(string)}
 	case "kick":
 		var hasID bool
 		var hasUsername bool
@@ -553,6 +592,16 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 		} else {
 			return nil, errors.New("no ban field in kick message")
 		}
+	case "new-group":
+		if _, ok := iface["name"]; !ok {
+			return nil, errors.New("no name field in new-group messsage")
+		}
+		msg = &MessageNewGroup{Name: iface["name"].(string)}
+	case "delete-group":
+		if _, ok := iface["name"]; !ok {
+			return nil, errors.New("no name field in delete-group message")
+		}
+		msg = &MessageDeleteGroup{Name: iface["name"].(string)}
 	}
 
 	if msg != nil {
@@ -622,6 +671,10 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		out = map[string]interface{}{"type": "user-quit", "username": msg.(*MessageUserQuit).Username}
 	case *MessageKick:
 		// todo, it isn't meant to be sent by server anyways
+	case *MessageNewGroup:
+		out = map[string]interface{}{"type": "new-group", "name": msg.(*MessageNewGroup).Name}
+	case *MessageDeleteGroup:
+		out = map[string]interface{}{"type": "delete-group", "name": msg.(*MessageDeleteGroup).Name}
 	default:
 		return nil, errors.New("invalid type")
 	}
