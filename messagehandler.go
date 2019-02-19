@@ -509,7 +509,7 @@ func handleSetFlagMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessag
 			"addr": connInfo.connection.RemoteAddr().String(),
 			"name": connInfo.username,
 			"err":  err,
-		}).Error("error when checking if user can manage groups")
+		}).Error("error when checking if user is owner")
 		return
 	} else if !can {
 		send(&MessageFail{Message: "no permissions"})
@@ -539,7 +539,48 @@ func handleSetFlagMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessag
 		}).Error("error when setting a flag")
 		return
 	}
-	send(&MessageOk{Message: "set the flag for group " + procmsg.Group})
+	send(&MessageOk{Message: "set flag " + procmsg.Name + " for group " + procmsg.Group})
+}
+
+func handleDeleteFlagMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	can, err := mel.Database.IsUserOwner(connInfo.username)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if user is owner")
+		return
+	} else if !can {
+		send(&MessageFail{Message: "no permissions"})
+		return
+	}
+	exists, err := mel.Database.GroupExists(message.(*MessageDeleteFlag).Group)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if a group exists")
+		return
+	} else if !exists {
+		send(&MessageFail{Message: "no such group"})
+		return
+	}
+	procmsg := message.(*MessageDeleteFlag)
+	err = mel.Database.DeleteFlag(&Flag{HasID: false, Group: procmsg.Group, Name: procmsg.Name})
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when removing a flag")
+		return
+	}
+	send(&MessageOk{Message: "removed flag " + procmsg.Name + " from group " + procmsg.Group})
 }
 
 // messageHandler - handles messages received from users
@@ -591,6 +632,8 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 			handleDeleteGroupMessage(mel, connInfo, message, send)
 		case *MessageSetFlag:
 			handleSetFlagMessage(mel, connInfo, message, send)
+		case *MessageDeleteFlag:
+			handleDeleteFlagMessage(mel, connInfo, message, send)
 		}
 	}
 }

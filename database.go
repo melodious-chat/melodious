@@ -524,10 +524,10 @@ func (db *Database) SetFlag(flag *Flag) (int, error) {
 }
 
 // DeleteFlag - deletes a flag.
-func (db *Database) DeleteFlag(flag Flag) error {
+func (db *Database) DeleteFlag(flag *Flag) error {
 	_, err := db.db.Exec(`
 		CALL melodious.delete_flag($1, $2);
-	`)
+	`, flag.Group, flag.Name)
 	return err
 }
 

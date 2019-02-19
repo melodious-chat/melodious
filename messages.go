@@ -464,6 +464,26 @@ func (m *MessageSetFlag) GetData() *MessageData {
 	return m.md
 }
 
+// MessageDeleteFlag - deletes a flag from the group.
+type MessageDeleteFlag struct {
+	md    *MessageData
+	Group string
+	Name  string
+}
+
+// GetType - MessageDeleteFlag.
+func (m *MessageDeleteFlag) GetType() string {
+	return "delete-flag"
+}
+
+// GetData - gets MessageData.
+func (m *MessageDeleteFlag) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	var msg BaseMessage
@@ -634,6 +654,14 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 			return nil, errors.New("no flag field in set-flag message")
 		}
 		msg = &MessageSetFlag{Group: iface["group"].(string), Name: iface["name"].(string), Flag: iface["flag"].(map[string]interface{})}
+	case "delete-flag":
+		if _, ok := iface["group"]; !ok {
+			return nil, errors.New("no group field in delete-flag message")
+		}
+		if _, ok := iface["name"]; !ok {
+			return nil, errors.New("no name field in delete-flag message")
+		}
+		msg = &MessageDeleteFlag{Group: iface["group"].(string), Name: iface["name"].(string)}
 	}
 
 	if msg != nil {
@@ -707,6 +735,10 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		out = map[string]interface{}{"type": "new-group", "name": msg.(*MessageNewGroup).Name}
 	case *MessageDeleteGroup:
 		out = map[string]interface{}{"type": "delete-group", "name": msg.(*MessageDeleteGroup).Name}
+	case *MessageSetFlag:
+		out = map[string]interface{}{"type": "set-flag", "group": msg.(*MessageSetFlag).Group, "name": msg.(*MessageSetFlag).Name, "flag": msg.(*MessageSetFlag).Flag}
+	case *MessageDeleteFlag:
+		// todo, it isn't meant to be sent by server anyways
 	default:
 		return nil, errors.New("invalid type")
 	}
