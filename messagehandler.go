@@ -610,14 +610,18 @@ func handleTypingMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage
 			connInfo.messageStream <- mt
 		}
 	})
-	send(&MessageOk{Message: "typing in " + procmsg.Channel})
+	if procmsg.Typing {
+		send(&MessageOk{Message: "typing in " + procmsg.Channel})
+	} else {
+		send(&MessageOk{Message: "stopped typing in " + procmsg.Channel})
+	}
 }
 
 // messageHandler - handles messages received from users
 func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	defer func() {
 		if err := recover(); err != nil {
-			send(&MessageFail{Message: fmt.Sprintf("%U", err)})
+			send(&MessageFail{Message: fmt.Sprintf("%v", err)})
 			log.WithFields(log.Fields{
 				"addr": connInfo.connection.RemoteAddr().String(),
 				"name": connInfo.username,
