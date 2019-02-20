@@ -21,7 +21,7 @@ type Database struct {
 // GetUsersList - gets users' data stored in the database
 func (db *Database) GetUsersList() ([]*User, error) {
 	rows, err := db.db.Query(`
-		SELECT id, username, owner FROM melodious.accounts;
+		SELECT id, username, owner FROM melodious.accounts WHERE banned=false;
 	`)
 	if err != nil {
 		return []*User{}, err
