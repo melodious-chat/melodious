@@ -583,6 +583,36 @@ func handleDeleteFlagMessage(mel *Melodious, connInfo *ConnInfo, message BaseMes
 	send(&MessageOk{Message: "removed flag " + procmsg.Name + " from group " + procmsg.Group})
 }
 
+func handleTypingMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	can, err := connInfo.HasPerm(message.(*MessageTyping).Channel, "perms.post-message")
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if user can type")
+		return
+	}
+	if !can {
+		send(&MessageFail{Message: "no permissions"})
+		return
+	}
+
+	if message.(*MessageTyping).HasUsername {
+		send(&MessageNote{Message: "you cannot set username field in typing message"})
+	}
+	username := connInfo.username
+	procmsg := message.(*MessageTyping)
+	mt := &MessageTyping{Channel: procmsg.Channel, Username: username, Typing: procmsg.Typing}
+	mel.IterateOverAllConnections(func(connInfo *ConnInfo) {
+		if subbed, ok := connInfo.subscriptions.Load(message.(*MessageTyping).Channel); subbed == true && ok {
+			connInfo.messageStream <- mt
+		}
+	})
+	send(&MessageOk{Message: "typing in " + procmsg.Channel})
+}
+
 // messageHandler - handles messages received from users
 func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	defer func() {
@@ -634,6 +664,8 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 			handleSetFlagMessage(mel, connInfo, message, send)
 		case *MessageDeleteFlag:
 			handleDeleteFlagMessage(mel, connInfo, message, send)
+		case *MessageTyping:
+			handleTypingMessage(mel, connInfo, message, send)
 		}
 	}
 }

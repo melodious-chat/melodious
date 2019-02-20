@@ -484,6 +484,28 @@ func (m *MessageDeleteFlag) GetData() *MessageData {
 	return m.md
 }
 
+// MessageTyping - sends a typing indicator.
+type MessageTyping struct {
+	md          *MessageData
+	Channel     string
+	Username    string
+	Typing      bool
+	HasUsername bool
+}
+
+// GetType - MessageTyping.
+func (m *MessageTyping) GetType() string {
+	return "typing"
+}
+
+// GetData - gets MessageData.
+func (m *MessageTyping) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	var msg BaseMessage
@@ -662,6 +684,20 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 			return nil, errors.New("no name field in delete-flag message")
 		}
 		msg = &MessageDeleteFlag{Group: iface["group"].(string), Name: iface["name"].(string)}
+	case "typing":
+		var username string
+		var hasUsername bool
+		if _, ok := iface["channel"]; !ok {
+			return nil, errors.New("no channel field in typing message")
+		}
+		if _, ok := iface["typing"]; !ok {
+			return nil, errors.New("no typing field in typing message")
+		}
+		if _, ok := iface["username"]; ok {
+			username = iface["username"].(string)
+			hasUsername = true
+		}
+		msg = &MessageTyping{Channel: iface["channel"].(string), Username: username, Typing: iface["typing"].(bool), HasUsername: hasUsername}
 	}
 
 	if msg != nil {
@@ -738,7 +774,13 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 	case *MessageSetFlag:
 		out = map[string]interface{}{"type": "set-flag", "group": msg.(*MessageSetFlag).Group, "name": msg.(*MessageSetFlag).Name, "flag": msg.(*MessageSetFlag).Flag}
 	case *MessageDeleteFlag:
-		// todo, it isn't meant to be sent by server anyways
+		out = map[string]interface{}{"type": "delete-flag", "group": msg.(*MessageDeleteFlag).Group, "name": msg.(*MessageDeleteFlag).Name}
+	case *MessageTyping:
+		if msg.(*MessageTyping).HasUsername {
+			out = map[string]interface{}{"type": "typing", "channel": msg.(*MessageTyping).Channel, "username": msg.(*MessageTyping).Username, "typing": msg.(*MessageTyping).Typing}
+		} else {
+			out = map[string]interface{}{"type": "typing", "channel": msg.(*MessageTyping).Channel, "typing": msg.(*MessageTyping).Typing}
+		}
 	default:
 		return nil, errors.New("invalid type")
 	}
