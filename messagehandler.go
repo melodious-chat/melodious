@@ -232,6 +232,20 @@ func handleSubscribeMessage(mel *Melodious, connInfo *ConnInfo, message BaseMess
 		return
 	}
 
+	exists, err := mel.Database.ChannelExists(message.(*MessageSubscribe).Name)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if the channel exists")
+		return
+	} else if !exists {
+		send(&MessageFail{Message: "no such channel"})
+		return
+	}
+
 	if message.(*MessageSubscribe).Subbed {
 		connInfo.subscriptions.Store(message.(*MessageSubscribe).Name, message.(*MessageSubscribe).Subbed)
 		send(&MessageOk{Message: "subscribed to channel " + message.(*MessageSubscribe).Name})
@@ -617,6 +631,61 @@ func handleTypingMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage
 	}
 }
 
+func handleNewGroupHolderMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	can, err := mel.Database.IsUserOwner(connInfo.username)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if user is owner")
+		return
+	} else if !can {
+		send(&MessageFail{Message: "no permissions"})
+		return
+	}
+
+	procmsg := message.(*MessageNewGroupHolder)
+	if procmsg.Channel != "" {
+		exists, err := mel.Database.ChannelExists(message.(*MessageSubscribe).Name)
+		if err != nil {
+			send(&MessageFail{Message: "sorry, an internal database error has occured"})
+			log.WithFields(log.Fields{
+				"addr": connInfo.connection.RemoteAddr().String(),
+				"name": connInfo.username,
+				"err":  err,
+			}).Error("error when checking if the channel exists")
+			return
+		} else if !exists {
+			send(&MessageFail{Message: "no such channel"})
+			return
+		}
+	}
+	gh := &GroupHolder{Group: procmsg.Group, User: procmsg.User, Channel: procmsg.Channel}
+	_, err = mel.Database.AddGroupHolder(gh)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when adding a group holder")
+		return
+	}
+	sendmsg := &MessageOk{Message: ""}
+	if procmsg.User != "" {
+		sendmsg.Message += "assigned user " + procmsg.User
+	} else {
+		sendmsg.Message += "assigned everyone"
+	}
+	sendmsg.Message += " to group " + procmsg.Group
+	if procmsg.Channel != "" {
+		sendmsg.Message += " to channel " + procmsg.Channel
+	}
+	send(sendmsg)
+}
+
 // messageHandler - handles messages received from users
 func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	defer func() {
@@ -670,6 +739,8 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 			handleDeleteFlagMessage(mel, connInfo, message, send)
 		case *MessageTyping:
 			handleTypingMessage(mel, connInfo, message, send)
+		case *MessageNewGroupHolder:
+			handleNewGroupHolderMessage(mel, connInfo, message, send)
 		}
 	}
 }

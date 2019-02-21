@@ -377,6 +377,19 @@ func (db *Database) ListChannels() (map[string]interface{}, error) {
 	return m, nil
 }
 
+// ChannelExists - checks if a channel exists
+func (db *Database) ChannelExists(name string) (bool, error) {
+	row := db.db.QueryRow(`
+		SELECT EXISTS(SELECT * FROM melodious.channels WHERE name=$1);
+	`, name)
+	var exists bool
+	err := row.Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
 // SetChannelTopic - sets topic of the channel
 func (db *Database) SetChannelTopic(name string, topic string) error {
 	_, err := db.db.Exec(`
@@ -532,7 +545,7 @@ func (db *Database) DeleteFlag(flag *Flag) error {
 }
 
 // AddGroupHolder - adds a group holder
-func (db *Database) AddGroupHolder(gh GroupHolder) (int, error) {
+func (db *Database) AddGroupHolder(gh *GroupHolder) (int, error) {
 	row := db.db.QueryRow(`
 		SELECT melodious.insert_group_holder($1, $2, $3);
 	`, gh.Group, gh.User, gh.Channel)

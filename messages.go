@@ -506,6 +506,27 @@ func (m *MessageTyping) GetData() *MessageData {
 	return m.md
 }
 
+// MessageNewGroupHolder - assigns a user to a group and/or channel.
+type MessageNewGroupHolder struct {
+	md      *MessageData
+	Group   string
+	User    string
+	Channel string
+}
+
+// GetType - MessageNewGroupHolder.
+func (m *MessageNewGroupHolder) GetType() string {
+	return "new-group-holder"
+}
+
+// GetData - gets MessageData.
+func (m *MessageNewGroupHolder) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	var msg BaseMessage
@@ -698,6 +719,19 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 			hasUsername = true
 		}
 		msg = &MessageTyping{Channel: iface["channel"].(string), Username: username, Typing: iface["typing"].(bool), HasUsername: hasUsername}
+	case "new-group-holder":
+		var user string
+		var channel string
+		if _, ok := iface["group"]; !ok {
+			return nil, errors.New("no group field in new-group-holder message")
+		}
+		if _, ok := iface["user"]; ok {
+			user = iface["user"].(string)
+		}
+		if _, ok := iface["channel"]; ok {
+			channel = iface["channel"].(string)
+		}
+		msg = &MessageNewGroupHolder{Group: iface["group"].(string), User: user, Channel: channel}
 	}
 
 	if msg != nil {
@@ -781,6 +815,8 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		} else {
 			out = map[string]interface{}{"type": "typing", "channel": msg.(*MessageTyping).Channel, "typing": msg.(*MessageTyping).Typing}
 		}
+	case *MessageNewGroupHolder:
+		out = map[string]interface{}{"type": "new-group-holder", "group": msg.(*MessageNewGroupHolder).Group, "user": msg.(*MessageNewGroupHolder).User, "channel": msg.(*MessageNewGroupHolder).Channel}
 	default:
 		return nil, errors.New("invalid type")
 	}
