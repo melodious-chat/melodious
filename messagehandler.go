@@ -648,7 +648,7 @@ func handleNewGroupHolderMessage(mel *Melodious, connInfo *ConnInfo, message Bas
 
 	procmsg := message.(*MessageNewGroupHolder)
 	if procmsg.Channel != "" {
-		exists, err := mel.Database.ChannelExists(message.(*MessageSubscribe).Name)
+		exists, err := mel.Database.ChannelExists(procmsg.Channel)
 		if err != nil {
 			send(&MessageFail{Message: "sorry, an internal database error has occured"})
 			log.WithFields(log.Fields{
