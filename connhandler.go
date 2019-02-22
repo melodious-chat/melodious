@@ -107,7 +107,7 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 			func() {
 				defer func() {
 					if err := recover(); err != nil {
-						messageStream <- &MessageFail{Message: fmt.Sprintf("%U", err)}
+						messageStream <- &MessageFail{Message: fmt.Sprintf("%v", err)}
 						log.WithFields(log.Fields{
 							"addr": conn.RemoteAddr().String(),
 							"name": connInfo.username,

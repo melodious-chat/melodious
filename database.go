@@ -413,8 +413,8 @@ func (db *Database) DeleteOldMessages(period string) error {
 }
 
 // PostMessage - posts a new message
-func (db *Database) PostMessage(chanName string, message string, pings []string, author string) error {
-	_, err := db.db.Exec(`
+func (db *Database) PostMessage(chanName string, message string, pings []string, author string) (*ChatMessage, error) {
+	row := db.db.QueryRow(`
 		INSERT INTO melodious.messages
 		(chan_id, message, dt, pings, author_id)
 		VALUES (
@@ -423,12 +423,17 @@ func (db *Database) PostMessage(chanName string, message string, pings []string,
 			NOW(),
 			$3,
 			(SELECT id FROM melodious.accounts WHERE username=$4 LIMIT 1)
-		);
+		)
+		RETURNING message, pings, id, dt, $4, author_id;
 	`, chanName, message, pq.Array(pings), author)
+	msg := &ChatMessage{}
+	var cpings pq.StringArray
+	err := row.Scan(&(msg.Message), &cpings, &(msg.ID), &(msg.Timestamp), &(msg.Author), &(msg.AuthorID))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	msg.Pings = []string(cpings)
+	return msg, nil
 }
 
 // PostMessageChanID - posts a new message
@@ -449,6 +454,22 @@ func (db *Database) PostMessageChanID(chanID int, message string, pings []string
 	}
 	return nil
 }
+
+// DeleteMessage - deletes a message by ID.
+func (db *Database) DeleteMessage(id int) error {
+	_, err := db.db.Exec(`
+		DELETE FROM melodious.messages WHERE id=$1;
+	`, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// EditMessage - edits a message by ID.
+//func (db *Database) EditMessage(id int, content string) {
+//todo
+//}
 
 // GetMessages - gets last n messages in a channel starting from an id from the database
 func (db *Database) GetMessages(chanid int, msgid int, amount int) ([]*ChatMessage, error) {
@@ -481,6 +502,33 @@ func (db *Database) GetMessages(chanid int, msgid int, amount int) ([]*ChatMessa
 		msgs = append(msgs, msg)
 	}
 	return msgs, nil
+}
+
+// GetMessageDetails - gets a message and the channel it's from by id
+func (db *Database) GetMessageDetails(id int) (string, *ChatMessage, error) {
+	row := db.db.QueryRow(`
+		SELECT
+			m.message,
+			m.dt,
+			m.pings,
+			a.username author,
+			m.author_id,
+			c.name channel
+		FROM melodious.messages m
+		INNER JOIN melodious.accounts a ON m.author_id = a.id
+		INNER JOIN melodious.channels c ON m.chan_id = c.id
+		WHERE m.id=$1;
+	`, id)
+	var pings pq.StringArray
+	var channel string
+	msg := &ChatMessage{}
+	err := row.Scan(&(msg.Message), &(msg.Timestamp), &pings, &(msg.Author), &(msg.AuthorID), &channel)
+	if err != nil {
+		return "", &ChatMessage{}, err
+	}
+	msg.Pings = []string(pings)
+	msg.ID = id
+	return channel, msg, nil
 }
 
 // AddGroup - adds a group

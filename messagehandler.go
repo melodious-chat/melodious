@@ -1,7 +1,10 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+	"runtime/debug"
+	"strconv"
 	"strings"
 
 	"github.com/apex/log"
@@ -271,11 +274,12 @@ func handlePostMsgMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessag
 		return
 	}
 
-	if message.(*MessagePostMsg).HasAuthor {
-		send(&MessageNote{Message: "you cannot set author field in post-message message"})
+	if _, ok := connInfo.subscriptions.Load(message.(*MessagePostMsg).Channel); !ok {
+		send(&MessageFail{Message: "not subscribed to the sending channel"})
+		return
 	}
 	author := connInfo.username
-	err = mel.Database.PostMessage(message.(*MessagePostMsg).Channel, message.(*MessagePostMsg).Content, []string{""}, author) // todo pings
+	msg, err := mel.Database.PostMessage(message.(*MessagePostMsg).Channel, message.(*MessagePostMsg).Content, []string{""}, author) // todo pings
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
 		log.WithFields(log.Fields{
@@ -284,13 +288,12 @@ func handlePostMsgMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessag
 			"err":  err,
 		}).Error("error when posting a message")
 	} else {
-		im := &MessagePostMsg{Content: message.(*MessagePostMsg).Content, Channel: message.(*MessagePostMsg).Channel, HasAuthor: true, Author: author}
+		im := &MessagePostMsg{Channel: message.(*MessagePostMsg).Channel, MsgObj: msg}
 		mel.IterateOverAllConnections(func(connInfo *ConnInfo) {
 			if subbed, ok := connInfo.subscriptions.Load(message.(*MessagePostMsg).Channel); subbed == true && ok {
 				connInfo.messageStream <- im
 			}
 		})
-		send(&MessageOk{Message: "message sent to channel " + message.(*MessagePostMsg).Channel})
 	}
 }
 
@@ -686,17 +689,89 @@ func handleNewGroupHolderMessage(mel *Melodious, connInfo *ConnInfo, message Bas
 	send(sendmsg)
 }
 
+func handleDeleteGroupHolderMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	can, err := mel.Database.IsUserOwner(connInfo.username)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if user is owner")
+		return
+	} else if !can {
+		send(&MessageFail{Message: "no permissions"})
+		return
+	}
+
+	procmsg := message.(*MessageDeleteGroupHolder)
+	err = mel.Database.DeleteGroupHolder(procmsg.ID)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when deleting a group holder")
+		return
+	}
+	send(&MessageOk{Message: "deleted group holder with id " + string(procmsg.ID)})
+}
+
+func handleDeleteMsgMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	procmsg := message.(*MessageDeleteMsg)
+	channel, msg, err := mel.Database.GetMessageDetails(procmsg.ID)
+	if err == sql.ErrNoRows {
+		send(&MessageFail{Message: "no such message with id " + strconv.Itoa(procmsg.ID)})
+		return
+	} else if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when fetching message details")
+		return
+	}
+	if msg.Author != connInfo.username {
+		can, err := connInfo.HasPerm(channel, "perms.delete-message")
+		if err != nil {
+			send(&MessageFail{Message: "sorry, an internal database error has occured"})
+			log.WithFields(log.Fields{
+				"addr": connInfo.connection.RemoteAddr().String(),
+				"name": connInfo.username,
+				"err":  err,
+			}).Error("error when checking if user has permissions")
+			return
+		} else if !can {
+			send(&MessageFail{Message: "no permissions"})
+			return
+		}
+	}
+	err = mel.Database.DeleteMessage(procmsg.ID)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when deleting a message")
+		return
+	}
+	send(&MessageOk{Message: "deleted message with id " + strconv.Itoa(procmsg.ID)})
+}
+
 // messageHandler - handles messages received from users
 func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	defer func() {
 		if err := recover(); err != nil {
-			send(&MessageFail{Message: fmt.Sprintf("%v", err)})
+			send(&MessageFatal{Message: fmt.Sprintf("%v", err)})
 			log.WithFields(log.Fields{
 				"addr": connInfo.connection.RemoteAddr().String(),
 				"name": connInfo.username,
 				"err":  err,
 			}).Error("panic while receiving a message")
-			connInfo.connection.Close()
+			debug.PrintStack()
 		}
 	}()
 
@@ -741,6 +816,8 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 			handleTypingMessage(mel, connInfo, message, send)
 		case *MessageNewGroupHolder:
 			handleNewGroupHolderMessage(mel, connInfo, message, send)
+		case *MessageDeleteMsg:
+			handleDeleteMsgMessage(mel, connInfo, message, send)
 		}
 	}
 }

@@ -265,11 +265,10 @@ func (m *MessageSubscribe) GetData() *MessageData {
 
 // MessagePostMsg - sends a message to a channel
 type MessagePostMsg struct {
-	md        *MessageData
-	Content   string
-	Channel   string
-	Author    string
-	HasAuthor bool
+	md      *MessageData
+	Content string
+	Channel string
+	MsgObj  *ChatMessage
 }
 
 // GetType - MessagePostMsg.
@@ -527,6 +526,81 @@ func (m *MessageNewGroupHolder) GetData() *MessageData {
 	return m.md
 }
 
+// MessageDeleteGroupHolder - unassigns a user from a group and/or channel.
+type MessageDeleteGroupHolder struct {
+	md *MessageData
+	ID int
+}
+
+// GetType - MessageDeleteGroupHolder.
+func (m *MessageDeleteGroupHolder) GetType() string {
+	return "delete-group-holder"
+}
+
+// GetData - gets MessageData.
+func (m *MessageDeleteGroupHolder) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
+// MessageGetGroupHolders - gets all group holders.
+type MessageGetGroupHolders struct {
+	md *MessageData
+}
+
+// GetType - MessageGetGroupHolders.
+func (m *MessageGetGroupHolders) GetType() string {
+	return "get-group-holders"
+}
+
+// GetData - gets MessageData.
+func (m *MessageGetGroupHolders) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
+// MessagePing - pings a user.
+type MessagePing struct {
+	md      *MessageData
+	Message *ChatMessage
+}
+
+// GetType - MessagePing.
+func (m *MessagePing) GetType() string {
+	return "ping"
+}
+
+// GetData - gets MessageData.
+func (m *MessagePing) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
+//MessageDeleteMsg - deletes a message by ID.
+type MessageDeleteMsg struct {
+	md *MessageData
+	ID int
+}
+
+// GetType - MessageDeleteMsg.
+func (m *MessageDeleteMsg) GetType() string {
+	return "delete-message"
+}
+
+// GetData - gets MessageData.
+func (m *MessageDeleteMsg) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	var msg BaseMessage
@@ -609,13 +683,7 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 		if _, ok := iface["channel"]; !ok {
 			return nil, errors.New("no channel field in send-message message")
 		}
-		author := ""
-		hasAuthor := false
-		if _, ok := iface["author"]; ok {
-			author = iface["author"].(string)
-			hasAuthor = true
-		}
-		msg = &MessagePostMsg{Content: iface["content"].(string), Channel: iface["channel"].(string), Author: author, HasAuthor: hasAuthor}
+		msg = &MessagePostMsg{Content: iface["content"].(string), Channel: iface["channel"].(string)}
 	case "get-messages":
 		if _, ok := iface["channel-id"]; !ok {
 			return nil, errors.New("no channel-id field in get-messages message")
@@ -732,6 +800,23 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 			channel = iface["channel"].(string)
 		}
 		msg = &MessageNewGroupHolder{Group: iface["group"].(string), User: user, Channel: channel}
+	case "delete-group-holder":
+		if _, ok := iface["id"]; !ok {
+			return nil, errors.New("no id field in delete-group-holder message")
+		}
+		msg = &MessageDeleteGroupHolder{ID: int(iface["id"].(float64))}
+	case "get-group-holders":
+		//todo
+	case "ping":
+		if _, ok := iface["message"]; !ok {
+			return nil, errors.New("no channel field in ping message")
+		}
+		msg = &MessagePing{Message: iface["message"].(*ChatMessage)}
+	case "delete-message":
+		if _, ok := iface["id"]; !ok {
+			return nil, errors.New("no id field in delete-message message")
+		}
+		msg = &MessageDeleteMsg{ID: int(iface["id"].(float64))}
 	}
 
 	if msg != nil {
@@ -766,7 +851,11 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 	case *MessageRegister:
 		out = map[string]interface{}{"type": "register", "name": msg.(*MessageRegister).Name, "pass": msg.(*MessageRegister).Pass}
 	case *MessageLogin:
-		out = map[string]interface{}{"type": "login", "name": msg.(*MessageLogin).Name, "pass": msg.(*MessageLogin).Pass}
+		if msg.(*MessageLogin).Pass == "" {
+			out = map[string]interface{}{"type": "login", "name": msg.(*MessageLogin).Name}
+		} else {
+			out = map[string]interface{}{"type": "login", "name": msg.(*MessageLogin).Name, "pass": msg.(*MessageLogin).Pass}
+		}
 	case *MessageNewChannel:
 		out = map[string]interface{}{"type": "new-channel", "name": msg.(*MessageNewChannel).Name, "topic": msg.(*MessageNewChannel).Topic}
 	case *MessageDeleteChannel:
@@ -776,8 +865,8 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 	case *MessageSubscribe:
 		out = map[string]interface{}{"type": "subscribe", "name": msg.(*MessageSubscribe).Name, "subbed": msg.(*MessageSubscribe).Subbed}
 	case *MessagePostMsg:
-		if msg.(*MessagePostMsg).HasAuthor {
-			out = map[string]interface{}{"type": "post-message", "content": msg.(*MessagePostMsg).Content, "channel": msg.(*MessagePostMsg).Channel, "author": msg.(*MessagePostMsg).Author}
+		if msg.(*MessagePostMsg).MsgObj != (&ChatMessage{}) {
+			out = map[string]interface{}{"type": "post-message", "message": msg.(*MessagePostMsg).MsgObj, "channel": msg.(*MessagePostMsg).Channel}
 		} else {
 			out = map[string]interface{}{"type": "post-message", "content": msg.(*MessagePostMsg).Content, "channel": msg.(*MessagePostMsg).Channel}
 		}
@@ -817,6 +906,14 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		}
 	case *MessageNewGroupHolder:
 		out = map[string]interface{}{"type": "new-group-holder", "group": msg.(*MessageNewGroupHolder).Group, "user": msg.(*MessageNewGroupHolder).User, "channel": msg.(*MessageNewGroupHolder).Channel}
+	case *MessageDeleteGroupHolder:
+		out = map[string]interface{}{"type": "delete-group-holder", "id": msg.(*MessageDeleteGroupHolder).ID}
+	case *MessageGetGroupHolders:
+		//todo
+	case *MessagePing:
+		out = map[string]interface{}{"type": "ping", "message": msg.(*MessagePing).Message}
+	case *MessageDeleteMsg:
+		out = map[string]interface{}{"type": "delete-message", "id": msg.(*MessageDeleteMsg).ID}
 	default:
 		return nil, errors.New("invalid type")
 	}
