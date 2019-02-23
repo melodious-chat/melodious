@@ -1,5 +1,7 @@
 # Melodious Chat Protocol (websocket)
 
+**Please note that this project is WIP and the protocol is subject to change.**
+
 Communication is established over a WebSocket _connection_ with JSON _messages_ used to exchange data.
 
 ## Messages
@@ -78,7 +80,7 @@ pass: Password. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
 
 Sent by client: Registers the client on the server.
 
-Sent by server: Indicates a user register event.
+Sent by server: Indicates a user register event (no "pass" field sent).
 
 If user with username `name` already exists, server MUST send a `fatal` message.
 
@@ -106,7 +108,7 @@ pass: Password. MUST match `[a-zA-Z0-9\-_\.]{3,32}` regex
 
 Sent by client: Logs the client in.
 
-Sent by server: Indicates a login (online) event.
+Sent by server: Indicates a login (online) event (no "pass" field sent).
 
 If user with username `name` does not exist or SHA256 hash/checksum `hash` is invalid, server MUST send a `fatal` message.
 
@@ -189,12 +191,27 @@ subbed: true or false maps to subscribed or unsubscribed respectively
 
 ### post-message
 
+Client:
 ```json
 {
     "type": "post-message",
     "content": "<string>",
-    "channel": "<string>",
-    "author": "<string>"
+    "channel": "<string>"
+}
+```
+Server:
+```json
+{
+    "type": "post-message",
+    "message": {
+        "content": "<string>",
+        "pings": ["<string>", ...],
+        "id": <int>,
+        "timestamp": "string",
+        "author": "<string>",
+        "author_id": <int>
+    },
+    "channel": "<string>"
 }
 ```
 
@@ -202,9 +219,19 @@ User needs perms.post-message flag or owner status to do that.
 
 content: message contents; maximum 2048 characters
 
-channel: channel name to send the message to
+channel: channel name to send the message to or the channel it was received from
 
 author: username of the user who sent this message
+
+pings: usernames of people that were mentioned in the message
+
+id: message ID
+
+timestamp: ISO 8601 timestamp
+
+author: username of the user who sent the message
+
+author_id: user's ID who sent the message
 
 Sent by client: Posts a message in a specific channel (the "author" field does not need to be sent).
 
@@ -297,3 +324,5 @@ Sent by server: Returns the client an array of users with their status of connec
 username: user's name
 
 Indicates a user disconnect (offline) event.
+
+TODO more messages

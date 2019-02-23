@@ -849,7 +849,11 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 	case *MessageFail:
 		out = map[string]interface{}{"type": "fail", "message": msg.(*MessageFail).Message}
 	case *MessageRegister:
-		out = map[string]interface{}{"type": "register", "name": msg.(*MessageRegister).Name, "pass": msg.(*MessageRegister).Pass}
+		if msg.(*MessageRegister).Pass == "" {
+			out = map[string]interface{}{"type": "register", "name": msg.(*MessageRegister).Name}
+		} else {
+			out = map[string]interface{}{"type": "register", "name": msg.(*MessageRegister).Name, "pass": msg.(*MessageRegister).Pass}
+		}
 	case *MessageLogin:
 		if msg.(*MessageLogin).Pass == "" {
 			out = map[string]interface{}{"type": "login", "name": msg.(*MessageLogin).Name}
