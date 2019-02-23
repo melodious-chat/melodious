@@ -6,7 +6,6 @@ import (
 
 // BaseMessage - A base struct for all messages
 type BaseMessage interface {
-	GetType() string
 	GetData() *MessageData
 }
 
@@ -54,11 +53,6 @@ type MessageQuit struct {
 	Message string
 }
 
-// GetType - MessageQuit.
-func (m *MessageQuit) GetType() string {
-	return "quit"
-}
-
 // GetData - gets MessageData.
 func (m *MessageQuit) GetData() *MessageData {
 	if m.md == nil {
@@ -71,11 +65,6 @@ func (m *MessageQuit) GetData() *MessageData {
 type MessageFatal struct {
 	md      *MessageData
 	Message string
-}
-
-// GetType - MessageFatal.
-func (m *MessageFatal) GetType() string {
-	return "fatal"
 }
 
 // GetData - gets MessageData.
@@ -92,11 +81,6 @@ type MessageNote struct {
 	Message string
 }
 
-// GetType - MessageNote.
-func (m *MessageNote) GetType() string {
-	return "note"
-}
-
 // GetData - gets MessageData.
 func (m *MessageNote) GetData() *MessageData {
 	if m.md == nil {
@@ -111,11 +95,6 @@ type MessageOk struct {
 	Message string
 }
 
-// GetType - MessageOk.
-func (m *MessageOk) GetType() string {
-	return "ok"
-}
-
 // GetData - gets MessageData.
 func (m *MessageOk) GetData() *MessageData {
 	if m.md == nil {
@@ -128,11 +107,6 @@ func (m *MessageOk) GetData() *MessageData {
 type MessageFail struct {
 	md      *MessageData
 	Message string
-}
-
-// GetType - MessageFail.
-func (m *MessageFail) GetType() string {
-	return "fail"
 }
 
 // GetData - gets MessageData.
@@ -150,11 +124,6 @@ type MessageRegister struct {
 	Pass string
 }
 
-// GetType - MessageRegister.
-func (m *MessageRegister) GetType() string {
-	return "register"
-}
-
 // GetData - gets MessageData.
 func (m *MessageRegister) GetData() *MessageData {
 	if m.md == nil {
@@ -168,11 +137,6 @@ type MessageLogin struct {
 	md   *MessageData
 	Name string
 	Pass string
-}
-
-// GetType - MessageLogin.
-func (m *MessageLogin) GetType() string {
-	return "login"
 }
 
 // GetData - gets MessageData.
@@ -190,11 +154,6 @@ type MessageNewChannel struct {
 	Topic string
 }
 
-// GetType - MessageNewChannel.
-func (m *MessageNewChannel) GetType() string {
-	return "new-channel"
-}
-
 // GetData - gets MessageData.
 func (m *MessageNewChannel) GetData() *MessageData {
 	if m.md == nil {
@@ -207,11 +166,6 @@ func (m *MessageNewChannel) GetData() *MessageData {
 type MessageDeleteChannel struct {
 	md   *MessageData
 	Name string
-}
-
-// GetType - MessageDeleteChannel.
-func (m *MessageDeleteChannel) GetType() string {
-	return "delete-channel"
 }
 
 // GetData - gets MessageData.
@@ -227,11 +181,6 @@ type MessageChannelTopic struct {
 	md    *MessageData
 	Name  string
 	Topic string
-}
-
-// GetType - MessageChannelTopic.
-func (m *MessageChannelTopic) GetType() string {
-	return "channel-topic"
 }
 
 // GetData - gets MessageData.
@@ -250,11 +199,6 @@ type MessageSubscribe struct {
 	Subbed bool
 }
 
-// GetType - MessageSubscribe.
-func (m *MessageSubscribe) GetType() string {
-	return "subscribe"
-}
-
 // GetData - gets MessageData.
 func (m *MessageSubscribe) GetData() *MessageData {
 	if m.md == nil {
@@ -269,11 +213,6 @@ type MessagePostMsg struct {
 	Content string
 	Channel string
 	MsgObj  *ChatMessage
-}
-
-// GetType - MessagePostMsg.
-func (m *MessagePostMsg) GetType() string {
-	return "post-message"
 }
 
 // GetData - gets MessageData.
@@ -292,11 +231,6 @@ type MessageGetMsgs struct {
 	Amount    int
 }
 
-// GetType - MessageGetMsgs.
-func (m *MessageGetMsgs) GetType() string {
-	return "get-messages"
-}
-
 // GetData - gets MessageData.
 func (m *MessageGetMsgs) GetData() *MessageData {
 	if m.md == nil {
@@ -309,11 +243,6 @@ func (m *MessageGetMsgs) GetData() *MessageData {
 type MessageGetMsgsResult struct {
 	md       *MessageData
 	Messages []*ChatMessage
-}
-
-// GetType - MessageGetMsgsResult.
-func (m *MessageGetMsgsResult) GetType() string {
-	return "get-messages-result"
 }
 
 // GetData - gets MessageData.
@@ -331,11 +260,6 @@ type MessageListChannels struct {
 	HasChannels bool
 }
 
-// GetType - MessageListChannels.
-func (m *MessageListChannels) GetType() string {
-	return "list-channels"
-}
-
 // GetData - gets MessageData.
 func (m *MessageListChannels) GetData() *MessageData {
 	if m.md == nil {
@@ -351,11 +275,6 @@ type MessageListUsers struct {
 	HasUsers bool
 }
 
-// GetType - MessageListUsers.
-func (m *MessageListUsers) GetType() string {
-	return "list-users"
-}
-
 // GetData - gets MessageData.
 func (m *MessageListUsers) GetData() *MessageData {
 	if m.md == nil {
@@ -368,11 +287,6 @@ func (m *MessageListUsers) GetData() *MessageData {
 type MessageUserQuit struct {
 	md       *MessageData
 	Username string
-}
-
-// GetType - MessageUserQuit.
-func (m *MessageUserQuit) GetType() string {
-	return "user-quit"
 }
 
 // GetData - gets MessageData.
@@ -391,11 +305,6 @@ type MessageKick struct {
 	Ban      bool
 }
 
-// GetType - MessageKick.
-func (m *MessageKick) GetType() string {
-	return "kick"
-}
-
 // GetData - gets MessageData.
 func (m *MessageKick) GetData() *MessageData {
 	if m.md == nil {
@@ -410,11 +319,6 @@ type MessageNewGroup struct {
 	Name string
 }
 
-// GetType - MessageNewGroup.
-func (m *MessageNewGroup) GetType() string {
-	return "new-group"
-}
-
 // GetData - gets MessageData.
 func (m *MessageNewGroup) GetData() *MessageData {
 	if m.md == nil {
@@ -427,11 +331,6 @@ func (m *MessageNewGroup) GetData() *MessageData {
 type MessageDeleteGroup struct {
 	md   *MessageData
 	Name string
-}
-
-// GetType - MessageDeleteGroup.
-func (m *MessageDeleteGroup) GetType() string {
-	return "delete-group"
 }
 
 // GetData - gets MessageData.
@@ -450,11 +349,6 @@ type MessageSetFlag struct {
 	Flag  map[string]interface{}
 }
 
-// GetType - MessageSetFlag.
-func (m *MessageSetFlag) GetType() string {
-	return "set-flag"
-}
-
 // GetData - gets MessageData.
 func (m *MessageSetFlag) GetData() *MessageData {
 	if m.md == nil {
@@ -468,11 +362,6 @@ type MessageDeleteFlag struct {
 	md    *MessageData
 	Group string
 	Name  string
-}
-
-// GetType - MessageDeleteFlag.
-func (m *MessageDeleteFlag) GetType() string {
-	return "delete-flag"
 }
 
 // GetData - gets MessageData.
@@ -492,11 +381,6 @@ type MessageTyping struct {
 	HasUsername bool
 }
 
-// GetType - MessageTyping.
-func (m *MessageTyping) GetType() string {
-	return "typing"
-}
-
 // GetData - gets MessageData.
 func (m *MessageTyping) GetData() *MessageData {
 	if m.md == nil {
@@ -513,11 +397,6 @@ type MessageNewGroupHolder struct {
 	Channel string
 }
 
-// GetType - MessageNewGroupHolder.
-func (m *MessageNewGroupHolder) GetType() string {
-	return "new-group-holder"
-}
-
 // GetData - gets MessageData.
 func (m *MessageNewGroupHolder) GetData() *MessageData {
 	if m.md == nil {
@@ -532,11 +411,6 @@ type MessageDeleteGroupHolder struct {
 	ID int
 }
 
-// GetType - MessageDeleteGroupHolder.
-func (m *MessageDeleteGroupHolder) GetType() string {
-	return "delete-group-holder"
-}
-
 // GetData - gets MessageData.
 func (m *MessageDeleteGroupHolder) GetData() *MessageData {
 	if m.md == nil {
@@ -548,11 +422,6 @@ func (m *MessageDeleteGroupHolder) GetData() *MessageData {
 // MessageGetGroupHolders - gets all group holders.
 type MessageGetGroupHolders struct {
 	md *MessageData
-}
-
-// GetType - MessageGetGroupHolders.
-func (m *MessageGetGroupHolders) GetType() string {
-	return "get-group-holders"
 }
 
 // GetData - gets MessageData.
@@ -569,11 +438,6 @@ type MessagePing struct {
 	Message *ChatMessage
 }
 
-// GetType - MessagePing.
-func (m *MessagePing) GetType() string {
-	return "ping"
-}
-
 // GetData - gets MessageData.
 func (m *MessagePing) GetData() *MessageData {
 	if m.md == nil {
@@ -586,11 +450,6 @@ func (m *MessagePing) GetData() *MessageData {
 type MessageDeleteMsg struct {
 	md *MessageData
 	ID int
-}
-
-// GetType - MessageDeleteMsg.
-func (m *MessageDeleteMsg) GetType() string {
-	return "delete-message"
 }
 
 // GetData - gets MessageData.
