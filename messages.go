@@ -436,6 +436,7 @@ func (m *MessageGetGroupHolders) GetData() *MessageData {
 type MessagePing struct {
 	md      *MessageData
 	Message *ChatMessage
+	Channel string
 }
 
 // GetData - gets MessageData.
@@ -668,9 +669,12 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 		//todo
 	case "ping":
 		if _, ok := iface["message"]; !ok {
+			return nil, errors.New("no message field in ping message")
+		}
+		if _, ok := iface["channel"]; !ok {
 			return nil, errors.New("no channel field in ping message")
 		}
-		msg = &MessagePing{Message: iface["message"].(*ChatMessage)}
+		msg = &MessagePing{Message: iface["message"].(*ChatMessage), Channel: iface["channel"].(string)}
 	case "delete-message":
 		if _, ok := iface["id"]; !ok {
 			return nil, errors.New("no id field in delete-message message")
@@ -774,7 +778,7 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 	case *MessageGetGroupHolders:
 		//todo
 	case *MessagePing:
-		out = map[string]interface{}{"type": "ping", "message": msg.(*MessagePing).Message}
+		out = map[string]interface{}{"type": "ping", "message": msg.(*MessagePing).Message, "channel": msg.(*MessagePing).Channel}
 	case *MessageDeleteMsg:
 		out = map[string]interface{}{"type": "delete-message", "id": msg.(*MessageDeleteMsg).ID}
 	default:

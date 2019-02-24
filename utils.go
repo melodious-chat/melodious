@@ -1,5 +1,11 @@
 package main
 
+import (
+	"regexp"
+	"strconv"
+	"strings"
+)
+
 // Flag - Describes a flag in the database
 type Flag struct {
 	ID    int
@@ -55,4 +61,21 @@ type User struct {
 type UserStatus struct {
 	User   *User `json:"user"`
 	Online bool  `json:"online"`
+}
+
+// getPings - gets all mentioned/pinged user IDs from a message string.
+func scanForPings(message string) []int {
+	re := regexp.MustCompile(`\<([^\<\>]*)\>`)
+	ids := []int{}
+	submatchall := re.FindAllString(message, -1)
+	for _, element := range submatchall {
+		element = strings.Trim(element, "<")
+		element = strings.Trim(element, ">")
+		element = strings.Trim(element, "@")
+		i, err := strconv.ParseInt(element, 10, 32)
+		if err == nil {
+			ids = append(ids, int(i))
+		}
+	}
+	return ids
 }

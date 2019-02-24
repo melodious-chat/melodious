@@ -695,6 +695,19 @@ func (db *Database) HasFlagChID(user string, channel int, flag string) (bool, er
 	return exists, nil
 }
 
+// GetUser - gets a user's info by their ID.
+func (db *Database) GetUser(id int) (*User, error) {
+	row := db.db.QueryRow(`
+		SELECT id, username, owner FROM melodious.accounts WHERE id=$1;
+	`, id)
+	user := &User{}
+	err := row.Scan(&(user.ID), &(user.Username), &(user.Owner))
+	if err != nil {
+		return &User{}, err
+	}
+	return user, nil
+}
+
 // NewDatabase - creates a new Database instance
 func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	db, err := sql.Open("postgres", addr)

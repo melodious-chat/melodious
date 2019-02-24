@@ -279,7 +279,25 @@ func handlePostMsgMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessag
 		return
 	}
 	author := connInfo.username
-	msg, err := mel.Database.PostMessage(message.(*MessagePostMsg).Channel, message.(*MessagePostMsg).Content, []string{""}, author) // todo pings
+	ids := scanForPings(message.(*MessagePostMsg).Content)
+	pings := []string{}
+	unknownids := []int{}
+	for _, id := range ids {
+		user, err := mel.Database.GetUser(id)
+		if err == sql.ErrNoRows {
+			unknownids = append(unknownids, id)
+		} else if err != nil {
+			send(&MessageFail{Message: "sorry, an internal database error has occured"})
+			log.WithFields(log.Fields{
+				"addr": connInfo.connection.RemoteAddr().String(),
+				"name": connInfo.username,
+				"err":  err,
+			}).Error("error when getting user info")
+		} else {
+			pings = append(pings, user.Username)
+		}
+	}
+	msg, err := mel.Database.PostMessage(message.(*MessagePostMsg).Channel, message.(*MessagePostMsg).Content, pings, author)
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
 		log.WithFields(log.Fields{
@@ -289,11 +307,24 @@ func handlePostMsgMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessag
 		}).Error("error when posting a message")
 	} else {
 		im := &MessagePostMsg{Channel: message.(*MessagePostMsg).Channel, MsgObj: msg}
+		if len(pings) != 0 {
+			ping := &MessagePing{Message: im.MsgObj, Channel: im.Channel}
+			for _, username := range pings {
+				mel.IterateOverConnections(username, func(connInfo *ConnInfo) {
+					connInfo.messageStream <- ping
+				})
+			}
+		}
 		mel.IterateOverAllConnections(func(connInfo *ConnInfo) {
 			if subbed, ok := connInfo.subscriptions.Load(message.(*MessagePostMsg).Channel); subbed == true && ok {
 				connInfo.messageStream <- im
 			}
 		})
+		unkidstr := ""
+		for _, id := range unknownids {
+			unkidstr += strconv.Itoa(id) + " "
+		}
+		send(&MessageNote{Message: "warning: unknown ids " + unkidstr})
 	}
 }
 
