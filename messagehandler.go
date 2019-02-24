@@ -324,7 +324,9 @@ func handlePostMsgMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessag
 		for _, id := range unknownids {
 			unkidstr += strconv.Itoa(id) + " "
 		}
-		send(&MessageNote{Message: "warning: unknown ids " + unkidstr})
+		if len(unknownids) != 0 {
+			send(&MessageNote{Message: "warning: unknown ids " + unkidstr})
+		}
 	}
 }
 
