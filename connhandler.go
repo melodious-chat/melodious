@@ -160,6 +160,7 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 
 	// sender
 	go func() {
+		conn.WriteMessage(websocket.TextMessage, []byte("Melodious indev"))
 		for running {
 			select {
 			case _ = <-connDead:
