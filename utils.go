@@ -63,6 +63,13 @@ type UserStatus struct {
 	Online bool  `json:"online"`
 }
 
+// Channel - describes a channel in the database
+type Channel struct {
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
+	Topic string `json:"topic"`
+}
+
 // getPings - gets all mentioned/pinged user IDs from a message string.
 func scanForPings(message string) []int {
 	re := regexp.MustCompile(`\<([^\<\>]*)\>`)

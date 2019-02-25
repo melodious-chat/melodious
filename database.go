@@ -352,26 +352,23 @@ func (db *Database) DeleteChannelID(id int) error {
 	return nil
 }
 
-// ListChannels - puts all channel names into a map
-func (db *Database) ListChannels() (map[string]interface{}, error) {
+// ListChannels - puts all channel names into an array of Channel structs
+func (db *Database) ListChannels() ([]*Channel, error) {
 	rows, err := db.db.Query(`
-		SELECT name, id FROM melodious.channels;
+		SELECT id, name, topic FROM melodious.channels;
 	`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-
-	//var m map[string]int
-	m := map[string]interface{}{}
+	m := []*Channel{}
 
 	for rows.Next() {
-		var name string
-		var id int
-		if err := rows.Scan(&name, &id); err != nil {
+		chnl := &Channel{}
+		if err := rows.Scan(&(chnl.ID), &(chnl.Name), &(chnl.Topic)); err != nil {
 			return nil, err
 		}
-		m[name] = id
+		m = append(m, chnl)
 	}
 
 	return m, nil

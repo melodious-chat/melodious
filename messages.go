@@ -256,7 +256,7 @@ func (m *MessageGetMsgsResult) GetData() *MessageData {
 // MessageListChannels - lists channels
 type MessageListChannels struct {
 	md          *MessageData
-	Channels    map[string]interface{}
+	Channels    []*Channel
 	HasChannels bool
 }
 
@@ -561,10 +561,10 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 		}
 		msg = &MessageGetMsgsResult{Messages: iface["messages"].([]*ChatMessage)}
 	case "list-channels":
-		channels := map[string]interface{}{}
+		channels := []*Channel{}
 		hasChannels := false
 		if _, ok := iface["channels"]; ok {
-			channels = iface["channels"].(map[string]interface{})
+			channels = iface["channels"].([]*Channel)
 			hasChannels = true
 		}
 		msg = &MessageListChannels{Channels: channels, HasChannels: hasChannels}
