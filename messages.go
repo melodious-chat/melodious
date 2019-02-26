@@ -421,7 +421,8 @@ func (m *MessageDeleteGroupHolder) GetData() *MessageData {
 
 // MessageGetGroupHolders - gets all group holders.
 type MessageGetGroupHolders struct {
-	md *MessageData
+	md           *MessageData
+	GroupHolders []*GroupHolder
 }
 
 // GetData - gets MessageData.
@@ -666,7 +667,11 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 		}
 		msg = &MessageDeleteGroupHolder{ID: int(iface["id"].(float64))}
 	case "get-group-holders":
-		//todo
+		if _, ok := iface["group-holders"]; ok {
+			msg = &MessageGetGroupHolders{GroupHolders: iface["group-holders"].([]*GroupHolder)}
+		} else {
+			msg = &MessageGetGroupHolders{}
+		}
 	case "ping":
 		if _, ok := iface["message"]; !ok {
 			return nil, errors.New("no message field in ping message")
@@ -776,7 +781,11 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 	case *MessageDeleteGroupHolder:
 		out = map[string]interface{}{"type": "delete-group-holder", "id": msg.(*MessageDeleteGroupHolder).ID}
 	case *MessageGetGroupHolders:
-		//todo
+		if len(msg.(*MessageGetGroupHolders).GroupHolders) == 0 {
+			out = map[string]interface{}{"type": "get-group-holders"}
+		} else {
+			out = map[string]interface{}{"type": "get-group-holders", "group-holders": msg.(*MessageGetGroupHolders).GroupHolders}
+		}
 	case *MessagePing:
 		out = map[string]interface{}{"type": "ping", "message": msg.(*MessagePing).Message, "channel": msg.(*MessagePing).Channel}
 	case *MessageDeleteMsg:

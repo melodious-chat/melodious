@@ -692,7 +692,7 @@ func (db *Database) HasFlagChID(user string, channel int, flag string) (bool, er
 	return exists, nil
 }
 
-// GetUser - gets a user's info by their ID.
+// GetUser - gets a user's info by their ID
 func (db *Database) GetUser(id int) (*User, error) {
 	row := db.db.QueryRow(`
 		SELECT id, username, owner FROM melodious.accounts WHERE id=$1;
@@ -703,6 +703,31 @@ func (db *Database) GetUser(id int) (*User, error) {
 		return &User{}, err
 	}
 	return user, nil
+}
+
+// GetGroupHolders - gets all group holders that exist
+func (db *Database) GetGroupHolders() ([]*GroupHolder, error) {
+	rows, err := db.db.Query(`
+	SELECT 
+		gh.id, 
+		(SELECT name AS group FROM melodious.groups WHERE id=gh.group_id), 
+		(SELECT username AS user FROM melodious.accounts WHERE id=gh.user_id), 
+		(SELECT name AS channel FROM melodious.channels WHERE id=gh.channel_id) 
+	FROM melodious.group_holders gh;
+	`)
+	if err != nil {
+		return []*GroupHolder{}, err
+	}
+	ghs := []*GroupHolder{}
+	for rows.Next() {
+		gh := &GroupHolder{}
+		err = rows.Scan(&(gh.Group), &(gh.User), &(gh.Channel))
+		if err != nil {
+			return []*GroupHolder{}, err
+		}
+		ghs = append(ghs, gh)
+	}
+	return ghs, nil
 }
 
 // NewDatabase - creates a new Database instance

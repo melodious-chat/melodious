@@ -17,10 +17,9 @@ type Flag struct {
 
 // GroupHolder - Describes a group holder in the database
 type GroupHolder struct {
-	Group string
-
-	User    string
-	Channel string
+	Group   string `json:"group"`
+	User    string `json:"user"`
+	Channel string `json:"channel"`
 }
 
 // GroupHolderFQResult - Describes a group holder received from FlagQueryResult
