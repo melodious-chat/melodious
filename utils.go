@@ -17,6 +17,7 @@ type Flag struct {
 
 // GroupHolder - Describes a group holder in the database
 type GroupHolder struct {
+	ID      int    `json:"id"`
 	Group   string `json:"group"`
 	User    string `json:"user"`
 	Channel string `json:"channel"`

@@ -721,7 +721,7 @@ func (db *Database) GetGroupHolders() ([]*GroupHolder, error) {
 	ghs := []*GroupHolder{}
 	for rows.Next() {
 		gh := &GroupHolder{}
-		err = rows.Scan(&(gh.Group), &(gh.User), &(gh.Channel))
+		err = rows.Scan(&(gh.ID), &(gh.Group), &(gh.User), &(gh.Channel))
 		if err != nil {
 			return []*GroupHolder{}, err
 		}
