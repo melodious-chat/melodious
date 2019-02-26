@@ -878,6 +878,8 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 			handleNewGroupHolderMessage(mel, connInfo, message, send)
 		case *MessageDeleteMsg:
 			handleDeleteMsgMessage(mel, connInfo, message, send)
+		case *MessageGetGroupHolders:
+			handleGetGroupHoldersMessage(mel, connInfo, message, send)
 		}
 	}
 }
