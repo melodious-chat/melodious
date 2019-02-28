@@ -255,31 +255,41 @@ User needs perms.get-messages flag or owner status to do that.
 ```json
 {
     "type": "get-messages-result",
-    "messages": []
+    "messages": [{
+        "content": "<string>",
+        "pings": ["<string>", ...],
+        "id": <int>,
+        "timestamp": "<string>",
+        "author": "<string>",
+        "author_id": <int>
+    }, ...]
 }
 ```
 
-TODO
+Sent by client: requests messages from the server.
+
+Sent by server: returns a list of messages.
 
 ### list-channels
 
 ```json
 {
     "type": "list-channels",
-    "channels": {
-        "<string>": <int>,
-        ...
-    }
+    "channels": [{
+        "id": <int>,
+        "name": "<string>",
+        "topic": "<string>"
+    }, ...]
 }
 ```
 
 User needs perms.list-channels flag or owner status to do that.
 
-channels: a map in which channel name is a key and ID is a value
+channels: an array of channel objects
 
 Sent by client: Tells the server to fetch all channels that exist (the "channels" field does not need to be sent).
 
-Sent by server: Returns the client a channelname:id map
+Sent by server: Returns the client an array of channels
 
 ### list-users
 
@@ -325,4 +335,194 @@ username: user's name
 
 Indicates a user disconnect (offline) event.
 
-TODO more messages
+### kick (sent by client)
+
+```json
+{
+    "type": "kick",
+    "id": <int>, 
+    "username": "<string>",
+    "ban": <bool>
+}
+```
+id: user ID
+
+username: user's name
+
+ban: whether or not to set the user's banned flag to true
+
+Kicks and optionally bans a user. You MUSTN'T have both id and username fields.
+
+The banned user will be logged off with a user-quit event.
+
+### new-group (sent by client)
+
+```json
+{
+    "type": "new-group",
+    "name": "<string>"
+}
+```
+
+name: group name
+
+Creates a new group with a specified name. 
+
+### delete-group (sent by client)
+
+```json
+{
+    "type": "new-group",
+    "id": <int>
+}
+```
+
+id: group ID
+
+Deletes a group with a specified ID.
+
+### set-flag (sent by client)
+
+```json
+{
+    "type": "set-flag",
+    "group": "<string>",
+    "name": "<string>",
+    "flag": {
+        "<any-json>": "<here>",
+        ...
+    }
+}
+```
+
+group: group name
+
+name: flag name
+
+flag: any JSON for additional data
+
+Sets/creates a flag for the specified group with optional additional data. Required for setting up permissions for a group.
+
+### delete-flag (sent by client)
+
+```json
+{
+    "type": "set-flag",
+    "group": "<string>",
+    "name": "<string>"
+}
+```
+
+group: group name
+
+name: flag name
+
+Removes/deletes a flag from the specified group.
+
+### typing
+
+```json
+{
+    "type": "typing",
+    "channel": "<string>",
+    "username": "<string>"
+}
+```
+
+channel: channel name
+
+username: user's name
+
+Sent by client: sends a typing status to a channel (the "username" field does not need to be sent).
+
+Sent by server: indicates a typing event from someone.
+
+### new-group-holder (sent by client)
+
+```json
+{
+    "type": "new-group-holder",
+    "group": "<string>",
+    "user": "<string>",
+    "channel": "<string>"
+}
+```
+
+group: group name
+
+user: user's name
+
+channel: channel name
+
+Makes a link (called a group holder) of a group and a user and/or a channel.
+
+The logic is following:
+
+TODO EXPLAIN HOW THIS WORKS
+
+### delete-group-holder (sent by client)
+
+```json
+{
+    "type": "delete-group-holder",
+    "id": <int>
+}
+```
+
+id: group holder id
+
+Removes/deletes an already made link (group holder).
+
+### get-group-holders
+
+```json
+{
+    "type": "get-group-holders",
+    "group-holders": [{
+        "id": <int>,
+        "group": "<string>",
+        "user": "<string>",
+        "channel": "<string>"
+    }, ...]
+}
+```
+
+Sent by client: requests a list of group holders from the server (the "group-holders" field does not need to be sent).
+
+Sent by server: returns a list of group holders.
+
+### ping (sent by server)
+
+```json
+{
+    "type": "ping",
+    "message": {
+        "content": "<string>",
+        "pings": ["<string>", ...],
+        "id": <int>,
+        "timestamp": "string",
+        "author": "<string>",
+        "author_id": <int>
+    },
+    "channel": "<string>"
+}
+```
+
+message: a message object
+
+channel: name of the channel it's coming from
+
+Pings/mentions a mentioned user when the author sends a post-message event if message content contains a mention in the format of <@USERID>, regardless of the pinged/metioned user's subscription status.
+
+### delete-message (sent by client)
+
+```json
+{
+    "type": "delete-message",
+    "id": <int>
+}
+```
+
+id: message id
+
+Deletes a message with a specified id permanently.
