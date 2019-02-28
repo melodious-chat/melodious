@@ -591,9 +591,22 @@ func (db *Database) DeleteFlag(flag *Flag) error {
 
 // AddGroupHolder - adds a group holder
 func (db *Database) AddGroupHolder(gh *GroupHolder) (int, error) {
+	// make sure if strings are empty we pass NULL to PostgreSQL
+	var user interface{}
+	var channel interface{}
+	if gh.User != "" {
+		user = gh.User
+	} else {
+		user = nil
+	}
+	if gh.Channel != "" {
+		channel = gh.Channel
+	} else {
+		channel = nil
+	}
 	row := db.db.QueryRow(`
 		SELECT melodious.insert_group_holder($1, $2, $3);
-	`, gh.Group, gh.User, gh.Channel)
+	`, gh.Group, user, channel)
 	var id int
 	err := row.Scan(&id)
 	if err != nil {
@@ -721,9 +734,20 @@ func (db *Database) GetGroupHolders() ([]*GroupHolder, error) {
 	ghs := []*GroupHolder{}
 	for rows.Next() {
 		gh := &GroupHolder{}
-		err = rows.Scan(&(gh.ID), &(gh.Group), &(gh.User), &(gh.Channel))
+		// NULL handling
+		var user interface{}
+		var channel interface{}
+		err = rows.Scan(&(gh.ID), &(gh.Group), &user, &channel)
 		if err != nil {
 			return []*GroupHolder{}, err
+		}
+		switch user.(type) {
+		case string:
+			gh.User = user.(string)
+		}
+		switch channel.(type) {
+		case string:
+			gh.Channel = channel.(string)
 		}
 		ghs = append(ghs, gh)
 	}

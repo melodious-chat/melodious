@@ -748,7 +748,7 @@ func handleDeleteGroupHolderMessage(mel *Melodious, connInfo *ConnInfo, message 
 		}).Error("error when deleting a group holder")
 		return
 	}
-	send(&MessageOk{Message: "deleted group holder with id " + string(procmsg.ID)})
+	send(&MessageOk{Message: "deleted group holder with id " + strconv.Itoa(procmsg.ID)})
 }
 
 func handleDeleteMsgMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
@@ -876,6 +876,8 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 			handleTypingMessage(mel, connInfo, message, send)
 		case *MessageNewGroupHolder:
 			handleNewGroupHolderMessage(mel, connInfo, message, send)
+		case *MessageDeleteGroupHolder:
+			handleDeleteGroupHolderMessage(mel, connInfo, message, send)
 		case *MessageDeleteMsg:
 			handleDeleteMsgMessage(mel, connInfo, message, send)
 		case *MessageGetGroupHolders:
