@@ -498,7 +498,19 @@ func handleNewGroupMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessa
 		send(&MessageFail{Message: "no permissions"})
 		return
 	}
-	_, err = mel.Database.AddGroup(message.(*MessageNewGroup).Name)
+	if exists, err := mel.Database.GroupExists(message.(*MessageNewGroup).Name); err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if a group exists")
+		return
+	} else if exists {
+		send(&MessageFail{Message: "such group already exists"})
+		return
+	}
+	id, err := mel.Database.AddGroup(message.(*MessageNewGroup).Name)
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
 		log.WithFields(log.Fields{
@@ -508,7 +520,7 @@ func handleNewGroupMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessa
 		}).Error("error when adding a group")
 		return
 	}
-	send(&MessageOk{Message: "created group " + message.(*MessageNewGroup).Name})
+	send(&MessageOk{Message: "created group " + message.(*MessageNewGroup).Name + " with id " + strconv.Itoa(id)})
 }
 
 func handleDeleteGroupMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
@@ -747,6 +759,7 @@ func handleDeleteGroupHolderMessage(mel *Melodious, connInfo *ConnInfo, message 
 		return
 	} else if !exists {
 		send(&MessageFail{Message: "a group holder with such id does not exist"})
+		return
 	}
 	err = mel.Database.DeleteGroupHolder(procmsg.ID)
 	if err != nil {
