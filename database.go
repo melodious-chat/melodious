@@ -754,6 +754,19 @@ func (db *Database) GetGroupHolders() ([]*GroupHolder, error) {
 	return ghs, nil
 }
 
+// GroupHolderExists - checks if a group holder with the specified id exists
+func (db *Database) GroupHolderExists(id int) (bool, error) {
+	row := db.db.QueryRow(`
+		SELECT EXISTS(SELECT * FROM melodious.group_holders WHERE id=$1)
+	`, id)
+	var exists bool
+	err := row.Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
 // NewDatabase - creates a new Database instance
 func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	db, err := sql.Open("postgres", addr)

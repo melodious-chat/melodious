@@ -736,8 +736,18 @@ func handleDeleteGroupHolderMessage(mel *Melodious, connInfo *ConnInfo, message 
 		send(&MessageFail{Message: "no permissions"})
 		return
 	}
-
 	procmsg := message.(*MessageDeleteGroupHolder)
+	if exists, err := mel.Database.GroupHolderExists(procmsg.ID); err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when deleting a group holder")
+		return
+	} else if !exists {
+		send(&MessageFail{Message: "a group holder with such id does not exist"})
+	}
 	err = mel.Database.DeleteGroupHolder(procmsg.ID)
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
