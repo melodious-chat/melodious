@@ -826,6 +826,7 @@ func (db *Database) GetFlags(groupid int) ([]*Flag, error) {
 		if err != nil {
 			return []*Flag{}, err
 		}
+		flag.Flag = flagjson
 		flags = append(flags, flag)
 	}
 	return flags, nil
