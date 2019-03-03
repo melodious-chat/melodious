@@ -476,6 +476,21 @@ func (m *MessageGetGroups) GetData() *MessageData {
 	return m.md
 }
 
+// MessageGetFlags - gets flags from a group by its id.
+type MessageGetFlags struct {
+	md      *MessageData
+	GroupID int
+	Flags   []*Flag
+}
+
+// GetData - gets MessageData.
+func (m *MessageGetFlags) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	var msg BaseMessage
@@ -705,6 +720,16 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 		} else {
 			msg = &MessageGetGroups{}
 		}
+	case "get-flags":
+		if _, ok := iface["group-id"]; !ok {
+			return nil, errors.New("no group-id field in get-flags message")
+		}
+		groupid := int(iface["group-id"].(float64))
+		if _, ok := iface["flags"]; ok {
+			msg = &MessageGetFlags{GroupID: groupid, Flags: iface["flags"].([]*Flag)}
+		} else {
+			msg = &MessageGetFlags{GroupID: groupid}
+		}
 	}
 
 	if msg != nil {
@@ -812,6 +837,12 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		out = map[string]interface{}{"type": "delete-message", "id": msg.(*MessageDeleteMsg).ID}
 	case *MessageGetGroups:
 		out = map[string]interface{}{"type": "get-groups", "groups": msg.(*MessageGetGroups).Groups}
+	case *MessageGetFlags:
+		if msg.(*MessageGetFlags).GroupID == 0 {
+			out = map[string]interface{}{"type": "get-flags", "flags": msg.(*MessageGetFlags).Flags}
+		} else {
+			out = map[string]interface{}{"type": "get-flags", "group-id": msg.(*MessageGetFlags).GroupID}
+		}
 	default:
 		return nil, errors.New("invalid type")
 	}

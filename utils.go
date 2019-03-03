@@ -8,11 +8,10 @@ import (
 
 // Flag - Describes a flag in the database
 type Flag struct {
-	ID    int
-	HasID bool
-	Group string
-	Name  string
-	Flag  map[string]interface{}
+	ID    int                    `json:"id"`
+	Group string                 `json:"group"`
+	Name  string                 `json:"name"`
+	Flag  map[string]interface{} `json:"flag"`
 }
 
 // Group - describes a group in the database

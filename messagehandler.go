@@ -591,7 +591,7 @@ func handleSetFlagMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessag
 		return
 	}
 	procmsg := message.(*MessageSetFlag)
-	_, err = mel.Database.SetFlag(&Flag{HasID: false, Group: procmsg.Group, Name: procmsg.Name, Flag: procmsg.Flag})
+	_, err = mel.Database.SetFlag(&Flag{Group: procmsg.Group, Name: procmsg.Name, Flag: procmsg.Flag})
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
 		log.WithFields(log.Fields{
@@ -632,7 +632,7 @@ func handleDeleteFlagMessage(mel *Melodious, connInfo *ConnInfo, message BaseMes
 		return
 	}
 	procmsg := message.(*MessageDeleteFlag)
-	err = mel.Database.DeleteFlag(&Flag{HasID: false, Group: procmsg.Group, Name: procmsg.Name})
+	err = mel.Database.DeleteFlag(&Flag{Group: procmsg.Group, Name: procmsg.Name})
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
 		log.WithFields(log.Fields{
@@ -871,6 +871,46 @@ func handleGetGroupsMessage(mel *Melodious, connInfo *ConnInfo, message BaseMess
 	send(&MessageGetGroups{Groups: groups})
 }
 
+func handleGetFlagsMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	can, err := mel.Database.IsUserOwner(connInfo.username)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if user is owner")
+		return
+	} else if !can {
+		send(&MessageFail{Message: "no permissions"})
+		return
+	}
+	exists, err := mel.Database.GroupExistsID(message.(*MessageGetFlags).GroupID)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if a group exists")
+		return
+	} else if !exists {
+		send(&MessageFail{Message: "no such group"})
+		return
+	}
+	flags, err := mel.Database.GetFlags(message.(*MessageGetFlags).GroupID)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when getting flags")
+		return
+	}
+	send(&MessageGetFlags{Flags: flags})
+}
+
 // messageHandler - handles messages received from users
 func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	defer func() {
@@ -934,6 +974,8 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 			handleGetGroupHoldersMessage(mel, connInfo, message, send)
 		case *MessageGetGroups:
 			handleGetGroupsMessage(mel, connInfo, message, send)
+		case *MessageGetFlags:
+			handleGetFlagsMessage(mel, connInfo, message, send)
 		}
 	}
 }

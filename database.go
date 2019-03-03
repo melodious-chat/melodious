@@ -562,6 +562,19 @@ func (db *Database) GroupExists(name string) (bool, error) {
 	return exists, nil
 }
 
+// GroupExistsID - checks if a group exists by its id
+func (db *Database) GroupExistsID(id int) (bool, error) {
+	row := db.db.QueryRow(`
+		SELECT EXISTS(SELECT * FROM melodious.groups WHERE id=$1);
+	`, id)
+	var exists bool
+	err := row.Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
 // SetFlag - sets a flag. Returns a flag id
 func (db *Database) SetFlag(flag *Flag) (int, error) {
 	data, err := json.Marshal(flag.Flag)
@@ -785,6 +798,37 @@ func (db *Database) GetGroups() ([]*Group, error) {
 		groups = append(groups, group)
 	}
 	return groups, nil
+}
+
+// GetFlags - gets all flags from a group by its id
+func (db *Database) GetFlags(groupid int) ([]*Flag, error) {
+	rows, err := db.db.Query(`
+		SELECT
+			id,
+			(SELECT name AS group FROM melodious.groups WHERE id=flags.group_id),
+			name,
+			flag
+		FROM melodious.group_flags flags WHERE group_id=$1;
+	`, groupid)
+	if err != nil {
+		return []*Flag{}, err
+	}
+	flags := []*Flag{}
+	for rows.Next() {
+		flag := &Flag{}
+		var rawjson []byte
+		var flagjson map[string]interface{}
+		err = rows.Scan(&(flag.ID), &(flag.Group), &(flag.Name), &rawjson)
+		if err != nil {
+			return []*Flag{}, err
+		}
+		err = json.Unmarshal(rawjson, &flagjson)
+		if err != nil {
+			return []*Flag{}, err
+		}
+		flags = append(flags, flag)
+	}
+	return flags, nil
 }
 
 // NewDatabase - creates a new Database instance
