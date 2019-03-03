@@ -121,7 +121,7 @@ func handleLoginMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage,
 func handleNewChannelMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	cn, ct := message.(*MessageNewChannel).Name, message.(*MessageNewChannel).Topic
 	nc := &MessageNewChannel{Name: cn, Topic: ct}
-	can, err := connInfo.HasPerm(cn, "perms.new-channel")
+	can, err := connInfo.HasPerm(cn, "perms.manage-channels")
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
 		log.WithFields(log.Fields{
@@ -152,7 +152,7 @@ func handleNewChannelMessage(mel *Melodious, connInfo *ConnInfo, message BaseMes
 func handleChannelTopicMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	cn, ct := message.(*MessageChannelTopic).Name, message.(*MessageChannelTopic).Topic
 	mct := &MessageChannelTopic{Name: cn, Topic: ct}
-	can, err := connInfo.HasPerm(cn, "perms.channel-topic")
+	can, err := connInfo.HasPerm(cn, "perms.manage-channels")
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
 		log.WithFields(log.Fields{
@@ -183,7 +183,7 @@ func handleChannelTopicMessage(mel *Melodious, connInfo *ConnInfo, message BaseM
 func handleDeleteChannelMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	cn := message.(*MessageDeleteChannel).Name
 	dc := &MessageDeleteChannel{Name: cn}
-	can, err := connInfo.HasPerm(cn, "perms.delete-channel")
+	can, err := connInfo.HasPerm(cn, "perms.manage-channels")
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
 		log.WithFields(log.Fields{
@@ -844,6 +844,33 @@ func handleGetGroupHoldersMessage(mel *Melodious, connInfo *ConnInfo, message Ba
 	send(&MessageGetGroupHolders{GroupHolders: ghs})
 }
 
+func handleGetGroupsMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
+	can, err := mel.Database.IsUserOwner(connInfo.username)
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when checking if user is owner")
+		return
+	} else if !can {
+		send(&MessageFail{Message: "no permissions"})
+		return
+	}
+	groups, err := mel.Database.GetGroups()
+	if err != nil {
+		send(&MessageFail{Message: "sorry, an internal database error has occured"})
+		log.WithFields(log.Fields{
+			"addr": connInfo.connection.RemoteAddr().String(),
+			"name": connInfo.username,
+			"err":  err,
+		}).Error("error when getting groups")
+		return
+	}
+	send(&MessageGetGroups{Groups: groups})
+}
+
 // messageHandler - handles messages received from users
 func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
 	defer func() {
@@ -905,6 +932,8 @@ func messageHandler(mel *Melodious, connInfo *ConnInfo, message BaseMessage, sen
 			handleDeleteMsgMessage(mel, connInfo, message, send)
 		case *MessageGetGroupHolders:
 			handleGetGroupHoldersMessage(mel, connInfo, message, send)
+		case *MessageGetGroups:
+			handleGetGroupsMessage(mel, connInfo, message, send)
 		}
 	}
 }

@@ -15,6 +15,12 @@ type Flag struct {
 	Flag  map[string]interface{}
 }
 
+// Group - describes a group in the database
+type Group struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
 // GroupHolder - Describes a group holder in the database
 type GroupHolder struct {
 	ID      int    `json:"id"`

@@ -128,7 +128,7 @@ It is recommended that server stores hash sum of the hash sum of the password to
 }
 ```
 
-User needs perms.new-channel(user=$user,channel=$channel) flag or owner status to do that.
+User needs perms.manage-channels(user=$user,channel=$channel) flag or owner status to do that.
 
 name: channel name; maximum 32 characters
 
@@ -145,7 +145,7 @@ Sent by server: Notifies about a new channel.
 }
 ```
 
-User needs perms.delete-channel flag or owner status to do that.
+User needs perms.manage-channels flag or owner status to do that.
 
 name: channel name; maximum 32 characters
 
@@ -163,7 +163,7 @@ Sent by server: Notifies about a deleted channel. May mention non-existing chann
 }
 ```
 
-User needs perms.channel-topic flag or owner status to do that.
+User needs perms.manage-channels flag or owner status to do that.
 
 name: channel name; maximum 32 characters
 

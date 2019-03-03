@@ -462,6 +462,20 @@ func (m *MessageDeleteMsg) GetData() *MessageData {
 	return m.md
 }
 
+// MessageGetGroups - gets a list of groups.
+type MessageGetGroups struct {
+	md     *MessageData
+	Groups []*Group
+}
+
+// GetData - gets MessageData.
+func (m *MessageGetGroups) GetData() *MessageData {
+	if m.md == nil {
+		m.md = &MessageData{}
+	}
+	return m.md
+}
+
 // LoadMessage - builds a MessageBase struct based on given map[string]interface{}
 func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 	var msg BaseMessage
@@ -685,6 +699,12 @@ func LoadMessage(iface map[string]interface{}) (BaseMessage, error) {
 			return nil, errors.New("no id field in delete-message message")
 		}
 		msg = &MessageDeleteMsg{ID: int(iface["id"].(float64))}
+	case "get-groups":
+		if _, ok := iface["groups"]; ok {
+			msg = &MessageGetGroups{Groups: iface["groups"].([]*Group)}
+		} else {
+			msg = &MessageGetGroups{}
+		}
 	}
 
 	if msg != nil {
@@ -790,6 +810,8 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 		out = map[string]interface{}{"type": "ping", "message": msg.(*MessagePing).Message, "channel": msg.(*MessagePing).Channel}
 	case *MessageDeleteMsg:
 		out = map[string]interface{}{"type": "delete-message", "id": msg.(*MessageDeleteMsg).ID}
+	case *MessageGetGroups:
+		out = map[string]interface{}{"type": "get-groups", "groups": msg.(*MessageGetGroups).Groups}
 	default:
 		return nil, errors.New("invalid type")
 	}

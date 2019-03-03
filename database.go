@@ -767,6 +767,26 @@ func (db *Database) GroupHolderExists(id int) (bool, error) {
 	return exists, nil
 }
 
+// GetGroups - gets all groups that exist
+func (db *Database) GetGroups() ([]*Group, error) {
+	rows, err := db.db.Query(`
+		SELECT * FROM melodious.groups;
+	`)
+	if err != nil {
+		return []*Group{}, err
+	}
+	groups := []*Group{}
+	for rows.Next() {
+		group := &Group{}
+		err = rows.Scan(&(group.ID), &(group.Name))
+		if err != nil {
+			return []*Group{}, err
+		}
+		groups = append(groups, group)
+	}
+	return groups, nil
+}
+
 // NewDatabase - creates a new Database instance
 func NewDatabase(mel *Melodious, addr string) (*Database, error) {
 	db, err := sql.Open("postgres", addr)
