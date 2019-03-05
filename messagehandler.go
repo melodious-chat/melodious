@@ -479,6 +479,9 @@ func handleKickMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, 
 			return
 		}
 		send(&MessageOk{Message: "kicked and banned user " + username})
+		mel.IterateOverAllConnections(func(connInfo *ConnInfo) {
+			connInfo.messageStream <- message
+		})
 		return
 	}
 	send(&MessageOk{Message: "kicked user " + username})

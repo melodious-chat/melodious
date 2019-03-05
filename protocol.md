@@ -335,7 +335,7 @@ username: user's name
 
 Indicates a user disconnect (offline) event.
 
-### kick (sent by client)
+### kick
 
 ```json
 {
@@ -351,9 +351,11 @@ username: user's name
 
 ban: whether or not to set the user's banned flag to true
 
-Kicks and optionally bans a user. You MUSTN'T have both id and username fields.
+Sent by client: kicks and optionally bans a user. You MUSTN'T have both id and username fields.
 
-The banned user will be logged off with a user-quit event.
+Sent by server: indicates a user ban event. Sent ONLY IF ban is true.
+
+The kicked user will be logged off with a user-quit event.
 
 ### new-group (sent by client)
 

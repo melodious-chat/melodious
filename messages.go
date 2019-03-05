@@ -806,7 +806,11 @@ func MessageToIface(msg BaseMessage) (map[string]interface{}, error) {
 	case *MessageUserQuit:
 		out = map[string]interface{}{"type": "user-quit", "username": msg.(*MessageUserQuit).Username}
 	case *MessageKick:
-		// todo, it isn't meant to be sent by server anyways
+		if msg.(*MessageKick).ID == 0 {
+			out = map[string]interface{}{"type": "kick", "username": msg.(*MessageKick).Username, "ban": msg.(*MessageKick).Ban}
+		} else if msg.(*MessageKick).Username == "" {
+			out = map[string]interface{}{"type": "kick", "id": msg.(*MessageKick).ID, "ban": msg.(*MessageKick).Ban}
+		}
 	case *MessageNewGroup:
 		out = map[string]interface{}{"type": "new-group", "name": msg.(*MessageNewGroup).Name}
 	case *MessageDeleteGroup:
