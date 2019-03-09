@@ -50,7 +50,8 @@ An example config file:
 
 ## Current To-Do list
 
-* Implement a working prototype
-  * Implement flag-based permissions
-  * Implement clientside functions and messages
+* Implement misc features
+  * VoIP
+  * editable messages
+  * custom user status
 * Add a REST API for those who cannot use websockets
