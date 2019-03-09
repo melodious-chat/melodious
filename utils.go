@@ -91,3 +91,13 @@ func scanForPings(message string) []int {
 	}
 	return ids
 }
+
+// contains - check if a slice contains a value
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}

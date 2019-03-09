@@ -28,11 +28,17 @@ func handleConnect(mel *Melodious, w http.ResponseWriter, r *http.Request) {
 		WriteBufferSize: 1024,
 		CheckOrigin:     originChecker,
 	}
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err, "addr": r.RemoteAddr, "path": r.URL.Path}).Error("cannot upgrade to websocket")
+	header := http.Header{}
+	header.Add("Sec-WebSocket-Protocol", "melodious")
+	if contains(websocket.Subprotocols(r), "melodious") {
+		conn, err := upgrader.Upgrade(w, r, header)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err, "addr": r.RemoteAddr, "path": r.URL.Path}).Error("cannot upgrade to websocket")
+		} else {
+			go handleConnection(mel, conn)
+		}
 	} else {
-		go handleConnection(mel, conn)
+		w.WriteHeader(http.StatusBadRequest)
 	}
 }
 

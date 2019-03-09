@@ -2,7 +2,8 @@
 
 **Please note that this project is WIP and the protocol is subject to change.**
 
-Communication is established over a WebSocket _connection_ with JSON _messages_ used to exchange data.
+Communication is established over a WebSocket _connection_ with JSON _messages_ used to exchange data.  
+The "melodious" subprotocol MUST be specified in the request header, otherwise the server MUST return an HTTP response with code 400 (Bad Request).
 
 ## Messages
 

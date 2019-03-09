@@ -159,7 +159,7 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 
 	// sender
 	go func() {
-		conn.WriteMessage(websocket.TextMessage, []byte("Melodious indev"))
+		conn.WriteMessage(websocket.TextMessage, []byte("Melodious indev")) //todo replace with server info json
 		for running {
 			select {
 			case _ = <-connDead:
