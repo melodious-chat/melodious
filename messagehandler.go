@@ -821,19 +821,6 @@ func handleDeleteMsgMessage(mel *Melodious, connInfo *ConnInfo, message BaseMess
 }
 
 func handleGetGroupHoldersMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage, send func(BaseMessage)) {
-	can, err := mel.Database.IsUserOwner(connInfo.username)
-	if err != nil {
-		send(&MessageFail{Message: "sorry, an internal database error has occured"})
-		log.WithFields(log.Fields{
-			"addr": connInfo.connection.RemoteAddr().String(),
-			"name": connInfo.username,
-			"err":  err,
-		}).Error("error when checking if user is owner")
-		return
-	} else if !can {
-		send(&MessageFail{Message: "no permissions"})
-		return
-	}
 	ghs, err := mel.Database.GetGroupHolders()
 	if err != nil {
 		send(&MessageFail{Message: "sorry, an internal database error has occured"})
