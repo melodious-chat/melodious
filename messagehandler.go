@@ -78,7 +78,9 @@ func handleRegisterMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessa
 		}
 		event := &MessageRegister{Name: m.Name}
 		mel.IterateOverAllConnections(func(connInfo *ConnInfo) {
-			connInfo.messageStream <- event
+			if connInfo.username != event.Name {
+				connInfo.messageStream <- event
+			}
 		})
 	}
 }
@@ -113,7 +115,9 @@ func handleLoginMessage(mel *Melodious, connInfo *ConnInfo, message BaseMessage,
 		send(&MessageOk{Message: "done; you are now logged in"})
 		event := &MessageLogin{Name: m.Name}
 		mel.IterateOverAllConnections(func(connInfo *ConnInfo) {
-			connInfo.messageStream <- event
+			if connInfo.username != event.Name {
+				connInfo.messageStream <- event
+			}
 		})
 	}
 }
