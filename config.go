@@ -14,6 +14,9 @@ type Config struct {
 	// These are ISO 8601 durations
 	DeleteHistoryEvery string `json:"delete-history-every"`
 	StoreHistoryFor    string `json:"store-history-for"`
+
+	// Misc data
+	ServerName string `json:"server-name"`
 }
 
 // NewConfig - creates a new Config instance from given JSON data
