@@ -159,7 +159,12 @@ func handleConnection(mel *Melodious, conn *websocket.Conn) {
 
 	// sender
 	go func() {
-		conn.WriteMessage(websocket.TextMessage, []byte("Melodious indev")) //todo replace with server info json
+		// server info
+		conn.WriteJSON(map[string]interface{}{
+			"type":        "server-info",
+			"server-name": mel.Config.ServerName,
+			"version":     "indev",
+		})
 		for running {
 			select {
 			case _ = <-connDead:

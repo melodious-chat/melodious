@@ -10,7 +10,20 @@ The "melodious" subprotocol MUST be specified in the request header, otherwise t
 Each message is a JSON document which necessarily has `type` field which describes message type
 
 Each message MAY have an `_id` field. All responses to such message MUST contain the same `_id`.  
-If length of the id is more than 64 characters, then only first 64 characters are used. 
+If length of the id is more than 64 characters, then only first 64 characters are used.
+
+### server-info (sent by server)
+
+```json
+{
+    "type": "server-info",
+    "server-name": "<string>",
+    "version": "<string>"
+}
+```
+
+Describes the server's info.  
+Sent to client on connect.
 
 ### quit (sent by server and client)
 
