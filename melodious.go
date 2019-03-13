@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net"
 	"net/http"
 	"sync"
 
@@ -35,7 +36,12 @@ func (mel *Melodious) ConnectToDB() {
 // webServerRunner - An internal function used by RunWebServer
 func (mel *Melodious) webServerRunner() {
 	h := NewHTTPHandler(mel)
-	err := http.ListenAndServe(mel.Config.HTTPAddr, h)
+	server := &http.Server{Handler: h}
+	l, err := net.Listen("tcp4", mel.Config.HTTPAddr)
+	if err != nil {
+		log.WithField("err", err).Error("cannot listen")
+	}
+	err = server.Serve(l)
 	if err != nil {
 		log.WithField("err", err).Error("cannot serve")
 	}
