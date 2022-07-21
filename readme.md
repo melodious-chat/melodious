@@ -1,8 +1,11 @@
 # PROJECT FROZEN; Contributors needed
 
 I have too much going on, so the project is currently in the frozen state. I have little to no time on developing Melodious because I'm not going to sacrifice my time for this project due to having a full-time job.  
-I (or we) may get back on developing Melodious by January 1st 2020; but for now, if you want to contribute, please let me know.  
-*By Polyzium, December 22nd 2019*
+I (or we) may get back on developing Melodious by January 1st 2020; but for now, if you want to contribute, please let me know. 
+*- Polyzium, December 22nd 2019*  
+
+UPDATE: I'm no longer commited to its development due to Fosscord's existence. I recommend you use that instead when it's ready.  
+*Updated on July 21st 2022*
 
 # Melodious
 
